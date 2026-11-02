@@ -206,6 +206,16 @@ export default function App() {
     );
   }
 
+  // Film intro dostaje cały ekran, bez marginesów i paska stanu
+  if (screen === 'intro' || screen === 'intro_view') {
+    return (
+      <SafeAreaProvider>
+        <StatusBar hidden />
+        <View style={{ flex: 1, backgroundColor: '#000' }}>{body}</View>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={s.root}>
