@@ -14,6 +14,7 @@ export default {
 
     „Jestem” — mówi Mira. — „O czym chcesz pogadać?”`,
     [
+      topic('„Kim jest ten drugi głos?”', 'mt_shadow', { flag: 'shadow_seen' }),
       topic('„Jak to jest być w chipie?”', 'mt_chip'),
       topic('„Co pamiętasz z Doliny?”', 'mt_dolina'),
       topic('„Dlaczego właśnie ja?”', 'mt_why'),

@@ -389,7 +389,7 @@ function TitleScreen({ saved, found, onNew, onContinue, onEndings, onSettings })
     <View style={s.page}>
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
         <View style={s.bleed}>
-          <SceneArt art="street" height={210} />
+          <SceneArt art="street" height={170} />
         </View>
         <Text style={s.kicker}>NOWA WISŁA · 2091</Text>
         <Flicker style={[s.logo, { color: C.pink }]}>NEON</Flicker>

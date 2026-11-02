@@ -4,7 +4,7 @@ import { go, play, sc } from './_h.js';
 const P = 'Prolog · Kurier';
 
 export default {
-  start: sc(
+  pr_wake: sc(
     P,
     `Czwarta nad ranem. Budzik w kapsule piszczy tak samo jak wczoraj i przedwczoraj.
 

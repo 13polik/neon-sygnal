@@ -36,6 +36,7 @@ import kronika from './arcs/kronika.js';
 import iglicaExtra from './arcs/iglica_extra.js';
 import ostatnie from './arcs/ostatnie.js';
 import domkniecie from './arcs/domkniecie.js';
+import cien from './arcs/cien.js';
 
 export const START_STATS = { credits: 120, heat: 10, hp: 3, trust: 0 };
 
@@ -224,7 +225,7 @@ const CORE = {
     choices: [
       { text: '„Czego ode mnie chcesz?”', to: 'mira_want', req: { notFlag: 'mira_want' }, effect: { flag: 'mira_want' } },
       { text: '„Skąd mam wiedzieć, że nie kłamiesz?”', to: 'mira_proof', req: { notFlag: 'mira_proof' }, effect: { flag: 'mira_proof' } },
-      { text: 'Pomyśl, co dalej', to: 'dolina_intro' },
+      { text: 'Pomyśl, co dalej', to: 'sh_1' },
     ],
   },
 
@@ -252,7 +253,7 @@ const CORE = {
     chapter: 'Rozdział 2 · Głos',
     text:
       '„Rozumiem” — mówi cicho. — „Ale zanim mnie oddasz, sprawdź jedno. Idź na Szóstą Śluzę i zapytaj, co się stało z ludźmi, którzy wzięli Spokój.”\n\nPotem milknie.',
-    choices: [{ text: 'Pomyśl, co dalej', to: 'dolina_intro' }],
+    choices: [{ text: 'Pomyśl, co dalej', to: 'sh_1' }],
   },
 
   dolina_intro: {
@@ -490,7 +491,7 @@ const CORE = {
     text:
       'Peron kolejki magnetycznej świeci na biało. Pociąg do Iglic odjeżdża co dziesięć minut.\n\nKiedy wsiądziesz, nie będzie powrotu do Doliny.',
     choices: [
-      { text: 'Wsiądź do kolejki', to: 'train' },
+      { text: 'Wsiądź do kolejki', to: 'sh_2' },
       { text: 'Jeszcze się rozejrzyj', to: '@map' },
     ],
   },
@@ -569,7 +570,7 @@ const CORE = {
     text:
       'Poziom 210. Biel, szkło i zapach sztucznych kwiatów. Korytarze patrolują drony ochrony, a każdy z nich ma w pamięci twoją twarz.\n\n' +
       'Laboratorium doktor Wren jest na północnym końcu piętra. Serwerownia Halcyonu jest w samym środku, za blokiem B. We wschodnim skrzydle mieści się archiwum.',
-    choices: [{ text: 'Wejdź na korytarz', to: 'iglica_map', effect: { flag: 'in_iglica' } }],
+    choices: [{ text: 'Wejdź na korytarz', to: 'sh_3' }],
   },
 
   iglica_blackout: {
@@ -578,7 +579,7 @@ const CORE = {
       'Poziom 210. Biel, szkło i zapach sztucznych kwiatów. Robisz trzy kroki i nagle wszystkie światła gasną.\n\n' +
       'W uchu słyszysz chrapliwy śmiech Kreta: „Szczury dotrzymują słowa. Masz czas, zanim włączą zapasowe zasilanie.”\n\n' +
       'Część dronów ochrony opada bez prądu na podłogę. Systemy, które cię szukały, tracą trop.',
-    choices: [{ text: 'Wejdź na ciemny korytarz', to: 'iglica_map', effect: { heat: -20, flag: 'in_iglica' } }],
+    choices: [{ text: 'Wejdź na ciemny korytarz', to: 'sh_3', effect: { heat: -20 } }],
   },
 
   iglica_map: { map: 'iglica' },
@@ -631,9 +632,6 @@ const CORE = {
     choices: [{ text: 'Weź kartę', to: '@map', effect: { flag: 'wren_card', trust: 1 } }],
   },
 
-  server: {
-    route: [{ if: { flag: 'key' }, to: 'server_key' }, { to: 'server_nokey' }],
-  },
 
   server_nokey: {
     chapter: 'Iglica · Serwerownia',
@@ -835,4 +833,5 @@ export const STORY = {
   ...iglicaExtra,
   ...ostatnie,
   ...domkniecie,
+  ...cien,
 };

@@ -47,7 +47,17 @@ export const ART = {
 
 // Sceny fabuły bez wpisu dostają ilustrację po prefiksie id (patrz artFor)
 const BY_NODE = {
-  start: 'capsule',
+  start: 'ramp',
+  cold_2: 'ramp',
+  sh_1: 'laundry',
+  sh_1b: 'laundry',
+  sh_1c: 'laundry',
+  sh_2: 'station',
+  sh_2b: 'station',
+  sh_3: 'iglica',
+  sh_3b: 'iglica',
+  sh_3c: 'iglica',
+  kk_shadow: 'server',
   bruno_call: 'street',
   haggle: 'street',
   mira_talk: 'network',
@@ -145,7 +155,11 @@ const RIM = { mira: C.pink, sokol: C.red, oko: C.cyan, wren: '#e8eef5', prezes: 
 
 // Kto pojawia się w scenie: najpierw wpisy dokładne, potem po prefiksie id
 const CAST_BY_NODE = {
-  start: [],
+  start: ['sokol'],
+  cold_2: ['prezes'],
+  sh_2: ['mira'],
+  sh_2b: ['mira'],
+  kk_shadow: ['prezes'],
   bruno_call: ['bruno'],
   pr_corridor: ['pchla'],
   pr_pchla_bird: ['pchla'],
@@ -219,6 +233,7 @@ const CAST_BY_NODE = {
 };
 
 const CAST_BY_PREFIX = [
+  ['sh_', ['mira', 'prezes']],
   ['mt_', ['mira']],
   ['rd_', ['halina', 'teodor']],
   ['sl_hub', ['halina']],
@@ -269,6 +284,7 @@ export function castFor(nodeId) {
 
 const BY_PREFIX = [
   ['port_', 'port'],
+  ['sh_', 'server'],
   ['kk_', 'street'],
   ['arch_', 'archive'],
   ['kamil', 'canteen'],
@@ -366,7 +382,7 @@ function Drop({ x, height, delay, duration }) {
 // Ilustracja sceny: powolne przybliżenie, płynne wejście i deszcz na zewnątrz
 export default function SceneArt({ art, height, cast = [] }) {
   const { width } = useWindowDimensions();
-  const h = height ?? Math.min(220, Math.round(width * 0.52));
+  const h = height ?? Math.min(170, Math.round(width * 0.4));
   const fade = useRef(new Animated.Value(0)).current;
   const zoom = useRef(new Animated.Value(0)).current;
 

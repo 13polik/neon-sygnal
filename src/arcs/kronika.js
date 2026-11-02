@@ -37,10 +37,12 @@ export default {
     `Mijają tygodnie. Dolina wciąż moknie, ale coś się w niej zmieniło. Ludzie częściej podnoszą głowy znad kałuż.
 
     Kurierzy roznoszą nie tylko paczki, ale też plotki. A plotek jest teraz dużo, i większość jest dobra.`,
-    [go('Posłuchaj plotek', 'kk_0')]
+    [go('Posłuchaj plotek', 'kk_pre')]
   ),
 
   ...Object.fromEntries(Object.entries(steps).filter(([k]) => !k.endsWith('_next'))),
+
+  kk_pre: route({ if: { flag: 'shadow_trapped' }, to: 'kk_shadow' }, { to: 'kk_0' }),
 
   kk_end: route({ if: { flag: 'sisters' }, to: 'ep_name_8' }, { to: 'ep_signal_3' }),
 

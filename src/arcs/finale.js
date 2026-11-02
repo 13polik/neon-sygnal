@@ -131,5 +131,5 @@ export default {
     [chase(3)]
   ),
 
-  finale: route({ if: { flag: 'sisters' }, to: 'ep_name_1' }, { to: 'ep_signal_1' }),
+  finale: route({ if: { flag: 'mira_damaged' }, to: 'ep_signal_1' }, { if: { flag: 'sisters' }, to: 'ep_name_1' }, { to: 'ep_signal_1' }),
 };
