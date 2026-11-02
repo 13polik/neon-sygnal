@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { C, F, buzz } from './theme';
 
 const CODES = ['1C', '55', '7A', 'BD', 'E9', 'FF', '0D', 'A3', '4B'];
@@ -40,9 +40,9 @@ function Frame({ title, color, rules, phase, won, onStart, onDone, winText, lose
   return <View style={s.wrap}>{children}</View>;
 }
 
-export function HackGame({ level, onDone }) {
+export function HackGame({ level, mods = [], onDone }) {
   const len = 2 + level;
-  const total = [12, 11, 10][level - 1];
+  const total = [12, 11, 10][level - 1] + (mods.includes('icebreaker') ? 3 : 0);
   const { target, grid } = useMemo(() => {
     const t = shuffle(CODES).slice(0, len);
     const g = Array.from({ length: 16 }, () => CODES[Math.floor(Math.random() * CODES.length)]);
@@ -121,7 +121,8 @@ export function HackGame({ level, onDone }) {
   );
 }
 
-export function TimingGame({ level, onDone }) {
+export function TimingGame({ level, mods = [], onDone }) {
+  const slow = mods.includes('reflex');
   const need = 3;
   const [phase, setPhase] = useState('intro');
   const [won, setWon] = useState(false);
@@ -130,8 +131,8 @@ export function TimingGame({ level, onDone }) {
   const [, setFrame] = useState(0);
   const pos = useRef(0);
   const dir = useRef(1);
-  const speed = useRef(0.7 + level * 0.3);
-  const width = 0.26 - level * 0.05;
+  const speed = useRef((0.7 + level * 0.3) * (slow ? 0.75 : 1));
+  const width = 0.26 - level * 0.05 + (slow ? 0.05 : 0);
   const [zone, setZone] = useState(() => 0.25 + Math.random() * 0.5);
 
   useEffect(() => {
@@ -202,6 +203,122 @@ export function TimingGame({ level, onDone }) {
   );
 }
 
+export function ChaseGame({ level, mods = [], onDone }) {
+  const dur = 14;
+  const maxHits = mods.includes('armor') ? 3 : 2;
+  const speed = (250 + level * 70) * (mods.includes('reflex') ? 0.85 : 1);
+  const gap = 0.85 - level * 0.12;
+  const [phase, setPhase] = useState('intro');
+  const [won, setWon] = useState(false);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [, setFrame] = useState(0);
+  const st = useRef({ lane: 1, obs: [], spawn: 0.6, time: 0, hits: 0, scroll: 0, id: 0, flash: 0 });
+
+  useEffect(() => {
+    if (phase !== 'play' || !size.height) return;
+    let raf;
+    let last = null;
+    const g = st.current;
+    const bikeY = size.height - 100;
+    const step = (t) => {
+      const dt = last == null ? 0 : Math.min(0.05, (t - last) / 1000);
+      last = t;
+      g.time += dt;
+      g.scroll = (g.scroll + speed * dt) % 48;
+      g.flash = Math.max(0, g.flash - dt);
+      g.spawn -= dt;
+      if (g.spawn <= 0 && g.time < dur - 1.2) {
+        g.spawn = gap * (0.7 + Math.random() * 0.6);
+        const lanes = [0, 1, 2].sort(() => Math.random() - 0.5);
+        const count = level >= 2 && Math.random() < 0.35 ? 2 : 1;
+        for (const lane of lanes.slice(0, count)) {
+          g.obs.push({ id: g.id++, lane, y: -70, kind: Math.random() < 0.6 ? 'car' : 'bar' });
+        }
+      }
+      for (const o of g.obs) {
+        o.y += speed * dt;
+        const h = o.kind === 'car' ? 64 : 20;
+        if (!o.hit && o.lane === g.lane && o.y + h > bikeY + 6 && o.y < bikeY + 50) {
+          o.hit = true;
+          g.hits++;
+          g.flash = 0.4;
+          buzz('bad');
+        }
+      }
+      g.obs = g.obs.filter((o) => o.y < size.height + 20);
+      if (g.hits >= maxHits) {
+        setWon(false);
+        setPhase('done');
+        return;
+      }
+      if (g.time >= dur) {
+        buzz('ok');
+        setWon(true);
+        setPhase('done');
+        return;
+      }
+      setFrame((f) => (f + 1) % 1e6);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [phase, size.height]);
+
+  const steer = (e) => {
+    const g = st.current;
+    const left = e.nativeEvent.pageX < Dimensions.get('window').width / 2;
+    g.lane = Math.max(0, Math.min(2, g.lane + (left ? -1 : 1)));
+    buzz();
+  };
+
+  const g = st.current;
+  const laneW = size.width / 3;
+  const dashes = [];
+  for (let y = -48 + g.scroll; y < size.height; y += 48) dashes.push(y);
+
+  return (
+    <Frame
+      title="POŚCIG"
+      color={C.yellow}
+      rules={`Stukaj lewą lub prawą stronę ekranu, żeby zmienić pas.\nWytrzymaj ${dur} sekund. Możesz uderzyć ${maxHits - 1 === 1 ? 'raz' : `${maxHits - 1} razy`}.`}
+      phase={phase}
+      won={won}
+      onStart={() => setPhase('play')}
+      onDone={onDone}
+      winText="ZGUBIONY OGON"
+      loseText="ROZBITY MOTOR"
+    >
+      <View style={s.chaseHud}>
+        <View style={s.timeBar}>
+          <View style={[s.timeFill, { width: `${Math.min(1, g.time / dur) * 100}%`, backgroundColor: C.yellow }]} />
+        </View>
+        <Text style={s.counter}>
+          UDERZENIA {g.hits}/{maxHits - 1}
+        </Text>
+      </View>
+      <Pressable style={s.road} onPressIn={steer} onLayout={(e) => setSize(e.nativeEvent.layout)}>
+        {[1, 2].map((k) =>
+          dashes.map((y) => <View key={`${k}-${y}`} style={[s.dash, { left: laneW * k - 2, top: y }]} />)
+        )}
+        {g.obs.map((o) =>
+          o.kind === 'car' ? (
+            <View key={o.id} style={[s.car, { left: laneW * o.lane + laneW / 2 - 22, top: o.y }]}>
+              <View style={s.carLight} />
+            </View>
+          ) : (
+            <View key={o.id} style={[s.barrier, { left: laneW * o.lane + 8, top: o.y, width: laneW - 16 }]} />
+          )
+        )}
+        {size.height ? (
+          <View style={[s.bike, { left: laneW * g.lane + laneW / 2 - 14, top: size.height - 100 }, g.flash > 0 && { backgroundColor: C.red }]}>
+            <View style={s.bikeLight} />
+          </View>
+        ) : null}
+      </Pressable>
+    </Frame>
+  );
+}
+
 const s = StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'center', gap: 24 },
   tag: { fontFamily: F.bold, fontSize: 34, letterSpacing: 6, textAlign: 'center' },
@@ -226,4 +343,12 @@ const s = StyleSheet.create({
   zone: { position: 'absolute', top: 0, bottom: 0, backgroundColor: 'rgba(255,46,136,0.35)', borderLeftWidth: 2, borderRightWidth: 2, borderColor: C.pink },
   marker: { position: 'absolute', top: 0, bottom: 0, width: 4, marginLeft: -2, backgroundColor: C.yellow },
   hint: { fontFamily: F.regular, fontSize: 13, color: C.dim, textAlign: 'center', letterSpacing: 3 },
+  chaseHud: { gap: 8 },
+  road: { flex: 1, backgroundColor: '#0b0c16', borderWidth: 1, borderColor: C.line, overflow: 'hidden', marginBottom: 12 },
+  dash: { position: 'absolute', width: 4, height: 24, backgroundColor: 'rgba(122,127,166,0.35)' },
+  car: { position: 'absolute', width: 44, height: 64, backgroundColor: '#2a1030', borderWidth: 2, borderColor: C.pink, alignItems: 'center', justifyContent: 'flex-end' },
+  carLight: { width: 30, height: 4, backgroundColor: C.red, marginBottom: 4 },
+  barrier: { position: 'absolute', height: 20, backgroundColor: '#3a3010', borderWidth: 2, borderColor: C.yellow },
+  bike: { position: 'absolute', width: 28, height: 50, backgroundColor: C.cyan, borderRadius: 8, alignItems: 'center' },
+  bikeLight: { width: 14, height: 6, backgroundColor: C.yellow, marginTop: 3, borderRadius: 3 },
 });

@@ -5,8 +5,10 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts, ChakraPetch_400Regular, ChakraPetch_500Medium, ChakraPetch_700Bold } from '@expo-google-fonts/chakra-petch';
 
 import { STORY, ENDINGS } from './src/story';
-import { applyEffect, clearSave, goTo, loadEndings, loadGame, lockReason, meets, newGame, saveGame, unlockEnding } from './src/engine';
-import { HackGame, TimingGame } from './src/MiniGames';
+import { applyEffect, clearSave, goTo, loadEndings, loadGame, lockReason, maxHp, meets, newGame, saveGame, unlockEnding } from './src/engine';
+import { ChaseGame, HackGame, TimingGame } from './src/MiniGames';
+import MapScreen from './src/MapScreen';
+import { MAPS } from './src/maps';
 import { C, F, buzz } from './src/theme';
 
 const DELTA_LABEL = { credits: 'kr', heat: 'Ślad', hp: 'Zdrowie', trust: 'Zaufanie Miry' };
@@ -31,7 +33,7 @@ export default function App() {
     setDeltas(d);
     setGame(state);
     const node = STORY[state.node];
-    setScreen(node.ending ? 'ending' : 'story');
+    setScreen(node.ending ? 'ending' : node.map ? 'map' : 'story');
     if (node.ending) {
       buzz(node.ending.key === 'signal' ? 'ok' : 'tap');
       setSaved(null);
@@ -62,17 +64,57 @@ export default function App() {
 
   const start = () => enter(newGame(), []);
 
+  // Mapa: wejście do miejsca, podniesienie kredytów, wykrycie przez drona
+  const enterPoi = (ch, p) => {
+    const poi = MAPS[game.map.id].pois[ch];
+    const done = poi.once ? [...game.map.done, ch] : game.map.done;
+    enter(goTo({ ...game, map: { ...game.map, ...p, done } }, poi.to), []);
+  };
+
+  const pickup = (key, amount, p) => {
+    setGame((g) => {
+      const { state } = applyEffect(g, { credits: amount });
+      const next = { ...state, map: { ...state.map, ...p, taken: [...state.map.taken, key] } };
+      saveGame(next);
+      return next;
+    });
+  };
+
+  const spotted = (p) => {
+    const { state, deltas: d } = applyEffect({ ...game, map: { ...game.map, ...p } }, { heat: 15 });
+    if (state.stats.heat >= 100) enter(goTo(state, 'end_caught'), d);
+    else {
+      setGame(state);
+      saveGame(state);
+    }
+  };
+
   let body;
   if (screen === 'title') {
     body = <TitleScreen saved={saved} found={endings.length} onNew={start} onContinue={() => enter(saved, [])} onEndings={() => setScreen('endings')} />;
   } else if (screen === 'endings') {
     body = <EndingsScreen found={endings} onBack={() => setScreen('title')} />;
   } else if (screen === 'game') {
-    const Mini = pending.type === 'hack' ? HackGame : TimingGame;
+    const Mini = { hack: HackGame, timing: TimingGame, chase: ChaseGame }[pending.type];
     body = (
       <View style={s.page}>
         <StatsBar game={game} />
-        <Mini level={pending.level} onDone={finishGame} />
+        <Mini level={pending.level} mods={game.flags} onDone={finishGame} />
+      </View>
+    );
+  } else if (screen === 'map') {
+    body = (
+      <View style={s.page}>
+        <StatsBar game={game} />
+        <MapScreen
+          key={`${game.map.id}-${game.node}`}
+          mapId={game.map.id}
+          mstate={game.map}
+          game={game}
+          onPoi={enterPoi}
+          onPickup={pickup}
+          onSpotted={spotted}
+        />
       </View>
     );
   } else if (screen === 'ending') {
@@ -129,7 +171,7 @@ function TitleScreen({ saved, found, onNew, onContinue, onEndings }) {
         <Text style={s.kicker}>NOWA WISŁA · 2091</Text>
         <Flicker style={[s.logo, { color: C.pink }]}>NEON</Flicker>
         <Text style={[s.logo, { color: C.cyan }]}>SYGNAŁ</Text>
-        <Text style={s.tagline}>Jeden chip. Jeden głos w twojej głowie.{'\n'}Siedem możliwych zakończeń.</Text>
+        <Text style={s.tagline}>Jeden chip. Jeden głos w twojej głowie.{'\n'}Osiem możliwych zakończeń.</Text>
       </View>
       <View style={{ gap: 12 }}>
         {saved ? <Button label="Kontynuuj" color={C.pink} onPress={onContinue} /> : null}
@@ -169,7 +211,7 @@ function StatsBar({ game }) {
       <View style={s.stat}>
         <Text style={s.statLabel}>ZDROWIE</Text>
         <View style={{ flexDirection: 'row', gap: 3, marginTop: 5 }}>
-          {[0, 1, 2].map((i) => (
+          {Array.from({ length: maxHp(game) }, (_, i) => i).map((i) => (
             <View key={i} style={[s.hpBox, { backgroundColor: i < hp ? C.pink : C.line }]} />
           ))}
         </View>
@@ -226,8 +268,7 @@ function StoryScreen({ game, deltas, onChoose, onMenu }) {
             const good = d.k === 'heat' ? d.v < 0 : d.v > 0;
             return (
               <Text key={d.k} style={[s.delta, { color: good ? C.green : C.red }]}>
-                {DELTA_LABEL[d.k]} {d.v > 0 ? '+' : ''}
-                {d.v}
+                {d.k === 'credits' ? `${d.v > 0 ? '+' : ''}${d.v} kr` : `${DELTA_LABEL[d.k]} ${d.v > 0 ? '+' : ''}${d.v}`}
               </Text>
             );
           })}
@@ -245,14 +286,14 @@ function StoryScreen({ game, deltas, onChoose, onMenu }) {
           <View style={{ gap: 10, marginTop: 20 }}>
             {node.choices.map((ch, i) => {
               const ok = meets(ch.req, game);
-              const kind = ch.game ? (ch.game.type === 'hack' ? 'WŁAM' : 'REFLEKS') : null;
+              const kind = ch.game ? { hack: 'WŁAM', timing: 'REFLEKS', chase: 'POŚCIG' }[ch.game.type] : null;
               return (
                 <Button
                   key={i}
                   label={ch.text}
                   color={ch.game ? C.pink : C.cyan}
                   disabled={!ok}
-                  note={!ok ? lockReason(ch.req) : kind ? `${kind} · poziom ${ch.game.level}` : null}
+                  note={!ok ? lockReason(ch.req, game) : kind ? `${kind} · poziom ${ch.game.level}` : null}
                   onPress={() => onChoose(ch)}
                 />
               );

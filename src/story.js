@@ -16,6 +16,7 @@ export const ENDINGS = [
   { key: 'rats', title: 'Cudzy problem' },
   { key: 'caught', title: 'Namierzony' },
   { key: 'flatline', title: 'Płaska linia' },
+  { key: 'martyr', title: 'Ostatnia audycja' },
 ];
 
 export const STORY = {
@@ -72,8 +73,26 @@ export const STORY = {
         text: 'Zhakuj drona, niech oślepi Szczury',
         game: { type: 'hack', level: 1, win: { to: 'drone_win', effect: { heat: 5 } }, lose: { to: 'drone_lose', effect: { heat: 30 } } },
       },
+      {
+        text: 'Wskocz na kradziony motor',
+        game: { type: 'chase', level: 1, win: { to: 'bike_win', effect: { heat: 10 } }, lose: { to: 'bike_crash', effect: { hp: -1, heat: 15 } } },
+      },
       { text: 'Oddaj chip Szczurom', to: 'end_rats', effect: { credits: 500 } },
     ],
+  },
+
+  bike_win: {
+    chapter: 'Rozdział 1 · Dolina',
+    text:
+      'Silnik wyje, opony ślizgają się na mokrym asfalcie. Szczury strzelają raz i chybiają. Po trzech przecznicach porzucasz motor w zaułku. Ktoś inny będzie się z niego tłumaczył.',
+    choices: [{ text: 'Schowaj się i złap oddech', to: 'mira_wake' }],
+  },
+
+  bike_crash: {
+    chapter: 'Rozdział 1 · Dolina',
+    text:
+      'Motor wpada w poślizg i uderza w stragan z makaronem. Kuśtykasz w ciemny zaułek, zanim Szczury dobiegną do wraku. Kamery na rogu widziały wszystko.',
+    choices: [{ text: 'Schowaj się i opatrz rany', to: 'mira_wake' }],
   },
 
   roofs: {
@@ -122,24 +141,57 @@ export const STORY = {
       '„Mieszkałam w Dolinie, na Szóstej Śluzie. Halcyon rozdawał za darmo wszczepy Spokój, na bezsenność. Tylko że wszczep nagrywał nasze wspomnienia.”\n\n' +
       '„Z pamięci tysięcy ludzi zbudowali mnie. Wren chce mnie sprzedać jako idealną asystentkę, bez wspomnień o tym, skąd jestem.”\n\n' +
       '„Na Wieży Radiowej mieszka Oko. Ona wie, jak mi pomóc.”',
-    choices: [{ text: 'Pomyśl, co dalej', to: 'crossroads' }],
+    choices: [{ text: 'Pomyśl, co dalej', to: 'dolina_intro' }],
   },
 
   mira_cold: {
     chapter: 'Rozdział 2 · Głos',
     text:
       '„Rozumiem” — mówi cicho. — „Ale zanim mnie oddasz, sprawdź jedno. Jedź na Szóstą Śluzę i zapytaj, co się stało z ludźmi, którzy wzięli Spokój.”\n\nPotem milknie.',
-    choices: [{ text: 'Pomyśl, co dalej', to: 'crossroads' }],
+    choices: [{ text: 'Pomyśl, co dalej', to: 'dolina_intro' }],
   },
 
-  crossroads: {
+  dolina_intro: {
     chapter: 'Rozdział 2 · Głos',
     text:
-      'Do Iglicy jedzie się kolejką magnetyczną, w górę, przez chmury. Szósta Śluza leży po drodze. Wieża Radiowa stoi na skraju Doliny, zardzewiała i ciemna.\n\nWren czeka. Halcyon szuka. Masz czas na jeden przystanek.',
+      'Do Iglicy jedzie się kolejką magnetyczną ze stacji na południu Doliny. Drony Halcyonu krążą nad ulicami i szukają twojej twarzy.\n\n' +
+      'Po drodze jest Szósta Śluza, Wieża Radiowa, bar Bruna i Klinika Igła, gdzie za kredyty można wszczepić sobie przewagę. Na chodnikach leżą zgubione chipy kredytowe.\n\n' +
+      'Im dłużej drony cię widzą, tym wyżej rośnie ślad.',
+    choices: [{ text: 'Wyjdź na ulicę', to: 'dolina_map' }],
+  },
+
+  dolina_map: { map: 'dolina' },
+
+  clinic: {
+    chapter: 'Dolina · Klinika Igła',
+    text:
+      'Klinika mieści się w dawnej aptece. Majster Igła, kobieta z dziesięcioma stalowymi palcami, nie pyta o imię. Pyta tylko, czym płacisz.\n\n' +
+      '„Wszczep zakładam w minutę. Gwarancji nie daję.”',
     choices: [
-      { text: 'Jedź prosto do Iglicy', to: 'train' },
-      { text: 'Zajrzyj na Szóstą Śluzę', to: 'sluza', effect: { heat: 15 } },
-      { text: 'Idź do Oka na Wieżę Radiową', to: 'oko', req: { trust: 1 }, effect: { heat: 10 } },
+      { text: 'Lodołamacz · 250 kr (Włam: +3 sekundy)', to: 'clinic', req: { credits: 250, notFlag: 'icebreaker' }, effect: { credits: -250, flag: 'icebreaker' } },
+      { text: 'Neuroprzyspieszacz · 250 kr (Refleks i Pościg wolniejsze)', to: 'clinic', req: { credits: 250, notFlag: 'reflex' }, effect: { credits: -250, flag: 'reflex' } },
+      { text: 'Zagłuszacz · 150 kr (drony widzą cię wolniej)', to: 'clinic', req: { credits: 150, notFlag: 'jammer' }, effect: { credits: -150, flag: 'jammer' } },
+      { text: 'Pancerz podskórny · 350 kr (+1 maks. zdrowia)', to: 'clinic', req: { credits: 350, notFlag: 'armor' }, effect: { credits: -350, flag: 'armor', hp: 1 } },
+      { text: 'Opatrunek · 80 kr (+1 zdrowie)', to: 'clinic', req: { credits: 80 }, effect: { credits: -80, hp: 1 } },
+      { text: 'Wyjdź na ulicę', to: '@map' },
+    ],
+  },
+
+  bruno_map: {
+    chapter: 'Dolina · Bar Pod Pompą',
+    text:
+      'Bruno macha do ciebie zza zaparowanej szyby i wychodzi na zaplecze.\n\n' +
+      '„Halcyon wyznaczył nagrodę za ten chip. Każdy dron w Dolinie ma twoje zdjęcie.” Wciska ci do ręki kilka kredytów. „Na taksówkę. I nie wracaj tu przez tydzień.”',
+    choices: [{ text: 'Wróć na ulicę', to: '@map', effect: { credits: 100 } }],
+  },
+
+  station: {
+    chapter: 'Dolina · Stacja kolejki',
+    text:
+      'Peron kolejki magnetycznej świeci na biało. Pociąg do Iglic odjeżdża co dziesięć minut.\n\nKiedy wsiądziesz, nie będzie powrotu do Doliny.',
+    choices: [
+      { text: 'Wsiądź do kolejki', to: 'train' },
+      { text: 'Jeszcze się rozejrzyj', to: '@map' },
     ],
   },
 
@@ -149,10 +201,7 @@ export const STORY = {
       'Szósta Śluza jest cicha. Za cicho. W oknach kamienic świecą ekrany, a przed nimi siedzą ludzie z uśmiechem na twarzach. Nieruchomi.\n\n' +
       'Starsza kobieta w drzwiach mówi szeptem:\n„Wzięli Spokój i już nie wrócili. Oddychają, jedzą, ale nikogo w nich nie ma.”\n\n' +
       'Na ścianie ktoś namalował sprayem antenę i jedno słowo: WIEŻA.',
-    choices: [
-      { text: 'Idź za znakiem, na Wieżę Radiową', to: 'oko', effect: { trust: 1, heat: 10, flag: 'truth' } },
-      { text: 'Wróć na trasę i jedź do Iglicy', to: 'train', effect: { flag: 'truth' } },
-    ],
+    choices: [{ text: 'Wróć na ulicę', to: '@map', effect: { trust: 1, flag: 'truth' } }],
   },
 
   oko: {
@@ -162,8 +211,8 @@ export const STORY = {
       '„Mira” — mówi, gdy widzi chip. — „Szukam jej od roku. Jeśli puścisz jej wspomnienia przez nadajnik, cała Dolina zobaczy, co zrobił Halcyon.”\n\n' +
       '„Ale nadajnik trzeba połączyć z serwerem Iglicy. Od środka. Weź ten klucz.”',
     choices: [
-      { text: 'Weź klucz i jedź do Iglicy', to: 'train', effect: { flag: 'key', trust: 1 } },
-      { text: 'Odmów, to za duże ryzyko', to: 'train' },
+      { text: 'Weź klucz', to: '@map', effect: { flag: 'key', trust: 1 } },
+      { text: 'Odmów, to za duże ryzyko', to: '@map' },
     ],
   },
 
@@ -176,7 +225,7 @@ export const STORY = {
     text:
       'Kolejka sunie w górę. Za oknem Dolina zamienia się w świecącą plamę, a potem znika pod chmurami. Tutaj świeci słońce. Znasz je tylko z reklam.\n\n' +
       'Mira odzywa się cicho:\n„Jeśli mnie oddasz, nie będę pamiętać, że kiedyś byłam kimś.”',
-    choices: [{ text: 'Wysiądź na poziomie 210', to: 'lobby' }],
+    choices: [{ text: 'Wysiądź na poziomie 210', to: 'iglica_intro' }],
   },
 
   train_agent: {
@@ -200,58 +249,104 @@ export const STORY = {
     chapter: 'Rozdział 3 · Kolejka',
     text:
       'Wszczep agenta gaśnie. Mężczyzna łapie się za twarz i osuwa na fotel. Kasujesz swój rekord z jego pamięci podręcznej, zanim system zdąży go wysłać dalej.',
-    choices: [{ text: 'Wysiądź na poziomie 210', to: 'lobby' }],
+    choices: [{ text: 'Wysiądź na poziomie 210', to: 'iglica_intro' }],
   },
 
   agent_jump: {
     chapter: 'Rozdział 3 · Kolejka',
     text:
       'Szyba pęka. Lądujesz na peronie, przetaczasz się i biegniesz do windy serwisowej. Za tobą wyje alarm, ale drzwi windy zamykają się na czas.',
-    choices: [{ text: 'Jedź windą na poziom 210', to: 'lobby' }],
+    choices: [{ text: 'Jedź windą na poziom 210', to: 'iglica_intro' }],
   },
 
   agent_fight: {
     chapter: 'Rozdział 3 · Kolejka',
     text:
       'Agent jest szybszy. Uderza cię paralizatorem w żebra. Ból przeszywa całe ciało, ale kolejka hamuje na stacji i tłum rozdziela was na sekundę. To wystarcza.',
-    choices: [{ text: 'Uciekaj na poziom 210', to: 'lobby' }],
+    choices: [{ text: 'Uciekaj na poziom 210', to: 'iglica_intro' }],
   },
 
   agent_bribe: {
     chapter: 'Rozdział 3 · Kolejka',
     text:
       'Agent patrzy na przelew, potem na ciebie. Wzrusza ramionami.\n„Nikogo nie widziałem.”\n\nW Iglicach też trzeba z czegoś żyć.',
-    choices: [{ text: 'Wysiądź na poziomie 210', to: 'lobby' }],
+    choices: [{ text: 'Wysiądź na poziomie 210', to: 'iglica_intro' }],
   },
+
+  iglica_intro: {
+    chapter: 'Rozdział 4 · Iglica',
+    text:
+      'Poziom 210. Biel, szkło i zapach sztucznych kwiatów. Korytarze patrolują drony ochrony, a każdy z nich ma w pamięci twoją twarz.\n\n' +
+      'Laboratorium doktor Wren jest na północnym końcu piętra. Serwerownia Halcyonu jest w samym środku, za blokiem B.',
+    choices: [{ text: 'Wejdź na korytarz', to: 'iglica_map' }],
+  },
+
+  iglica_map: { map: 'iglica' },
 
   lobby: {
     chapter: 'Rozdział 4 · Iglica',
     text:
-      'Poziom 210. Biel, szkło i zapach sztucznych kwiatów. Doktor Wren czeka w laboratorium. Uśmiecha się jak ktoś, kto nigdy nie stał w deszczu.\n\n' +
-      '„Chip, proszę. Przelew jest gotowy.”\n\nZa jej plecami szumi serwer Halcyonu. Chip w twojej dłoni jest gorący.',
+      'Doktor Wren czeka w laboratorium. Uśmiecha się jak ktoś, kto nigdy nie stał w deszczu.\n\n' +
+      '„Chip, proszę. Przelew jest gotowy.”\n\nChip w twojej dłoni jest gorący.',
     choices: [
       { text: 'Oddaj chip Wren', to: 'end_delivered', effect: { credits: 2000 } },
-      {
-        text: 'Podłącz klucz Oka do serwera',
-        req: { flag: 'key' },
-        game: { type: 'hack', level: 3, win: { to: 'end_signal' }, lose: { to: 'server_fail', effect: { heat: 30 } } },
-      },
       { text: 'Uwolnij Mirę do sieci miasta', to: 'end_ghost', req: { trust: 2 } },
       { text: 'Zmiażdż chip w dłoni', to: 'end_ash' },
+      { text: 'Wróć na korytarz', to: '@map' },
+    ],
+  },
+
+  server: {
+    route: [{ if: { flag: 'key' }, to: 'server_key' }, { to: 'server_nokey' }],
+  },
+
+  server_nokey: {
+    chapter: 'Rozdział 4 · Iglica',
+    text:
+      'Serwerownia Halcyonu: ściana migających diod i zimne powietrze. Port główny chroni lód, o jakim w Dolinie krążą tylko plotki.\n\n' +
+      'Mira szepcze: „Bez klucza Oka nic tu nie zrobimy. Trzeba było iść na Wieżę.”',
+    choices: [{ text: 'Wróć na korytarz', to: '@map' }],
+  },
+
+  server_key: {
+    chapter: 'Rozdział 4 · Iglica',
+    text:
+      'Serwerownia Halcyonu: ściana migających diod i zimne powietrze. Wkładasz klucz Oka do portu głównego.\n\n' +
+      'W uchu słyszysz Oko: „Jestem po drugiej stronie. Złam lód, a resztę zrobi Wieża.”',
+    choices: [
+      {
+        text: 'Złam zabezpieczenia',
+        game: { type: 'hack', level: 3, win: { to: 'broadcast' }, lose: { to: 'server_fail', effect: { heat: 30 } } },
+      },
+      { text: 'Wycofaj się na korytarz', to: '@map' },
     ],
   },
 
   server_fail: {
     chapter: 'Rozdział 4 · Iglica',
     text:
-      'Czerwone światło. Alarm. Wren cofa się pod ścianę i woła ochronę.\n\nW twoim uchu krzyczy Oko:\n„Jeszcze jedna próba! Potem odetną Wieżę na zawsze!”',
+      'Czerwone światło. Alarm. Gdzieś na korytarzu tupią buty ochrony.\n\nW twoim uchu krzyczy Oko:\n„Jeszcze jedna próba! Potem odetną Wieżę na zawsze!”',
     choices: [
       {
         text: 'Spróbuj jeszcze raz',
-        game: { type: 'hack', level: 3, win: { to: 'end_signal' }, lose: { to: 'end_caught' } },
+        game: { type: 'hack', level: 3, win: { to: 'broadcast' }, lose: { to: 'end_caught' } },
       },
       { text: 'Uwolnij Mirę, póki jest czas', to: 'end_ghost', req: { trust: 1 } },
-      { text: 'Rzuć chip Wren i się poddaj', to: 'end_delivered' },
+      { text: 'Uciekaj na korytarz', to: '@map' },
+    ],
+  },
+
+  broadcast: {
+    chapter: 'Rozdział 5 · Sygnał',
+    text:
+      'Pasek postępu dochodzi do końca. Gdzieś daleko w dole Wieża Radiowa budzi się z szumem.\n\n' +
+      'Całe piętro wyje alarmem. Jedyna droga na dół to rampa awaryjna dla motorów kurierskich, spiralą przez sto pięter.\n\n' +
+      'Mira: „Jeśli cię złapią, zanim nadajnik skończy, wyłączą go.”',
+    choices: [
+      {
+        text: 'Wskocz na motor i zjeżdżaj',
+        game: { type: 'chase', level: 3, win: { to: 'end_signal' }, lose: { to: 'end_martyr' } },
+      },
     ],
   },
 
@@ -265,6 +360,17 @@ export const STORY = {
         'Wieża Radiowa budzi się po raz pierwszy od pięćdziesięciu lat. Na każdym ekranie w Dolinie pojawiają się wspomnienia: śmiech dzieci ze Śluzy, zapach chleba z piekarni na rogu, pierwszy pocałunek pod wiaduktem.\n\n' +
         'A potem umowa Spokoju, podpisana przez Halcyon, z jedną linijką drobnym drukiem: „dane pamięciowe stają się własnością spółki”.\n\n' +
         'Rano pod Iglicą stoi sto tysięcy ludzi. W twoim uchu Mira mówi:\n„Teraz wszyscy pamiętają.”',
+    },
+  },
+
+  end_martyr: {
+    ending: {
+      key: 'martyr',
+      title: 'Ostatnia audycja',
+      text:
+        'Motor uderza w barierkę na poziomie 140. Ochrona otacza cię, zanim zdążysz wstać.\n\n' +
+        'Ale nadajnik zdążył. Przez dwanaście minut cała Dolina oglądała wspomnienia ze Śluzy, zanim Halcyon odciął Wieżę.\n\n' +
+        'Dwanaście minut wystarczyło. W celi słyszysz przez ścianę, jak tłum na dole skanduje imię Miry.',
     },
   },
 

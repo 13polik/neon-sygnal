@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORY, START_STATS } from './story';
+import { MAPS, TILE } from './maps';
 
 const SAVE_KEY = 'neon-sygnal/save';
 const ENDINGS_KEY = 'neon-sygnal/endings';
@@ -19,11 +20,11 @@ export function meets(req, state) {
   return true;
 }
 
-export function lockReason(req) {
+export function lockReason(req, state) {
+  if (req.notFlag && state.flags.includes(req.notFlag)) return 'Już masz';
   if (req.trust != null) return 'Mira ci nie ufa';
   if (req.credits != null) return `Potrzeba ${req.credits} kr`;
   if (req.flag === 'key') return 'Brak klucza Oka';
-  if (req.notFlag) return 'Już kupione';
   return 'Niedostępne';
 }
 
@@ -35,22 +36,30 @@ export function applyEffect(state, effect) {
   const stats = { ...state.stats };
   const flags = [...state.flags];
   const deltas = [];
+  if (effect.flag && !flags.includes(effect.flag)) flags.push(effect.flag);
   for (const k of ['credits', 'heat', 'hp', 'trust']) {
     if (effect[k] == null) continue;
     const before = stats[k];
     if (k === 'heat') stats.heat = clamp(before + effect.heat, 0, 100);
-    else if (k === 'hp') stats.hp = clamp(before + effect.hp, 0, 3);
+    else if (k === 'hp') stats.hp = clamp(before + effect.hp, 0, maxHp({ flags }));
     else if (k === 'credits') stats.credits = Math.max(0, before + effect.credits);
     else stats.trust = clamp(before + effect.trust, -2, 4);
     if (stats[k] !== before) deltas.push({ k, v: stats[k] - before });
   }
-  if (effect.flag && !flags.includes(effect.flag)) flags.push(effect.flag);
   return { state: { ...state, stats, flags }, deltas };
 }
 
-// Przejście do sceny: obsługuje przekierowania i śmierć/namierzenie
+export const maxHp = (state) => (state.flags.includes('armor') ? 4 : 3);
+
+function spawnOf(mapId) {
+  const grid = MAPS[mapId].grid;
+  const r = grid.findIndex((row) => row.includes('P'));
+  return { x: grid[r].indexOf('P') * TILE + TILE / 2, y: r * TILE + TILE / 2 };
+}
+
+// Przejście do sceny: obsługuje przekierowania, powrót na mapę ('@map') i śmierć/namierzenie
 export function goTo(state, to) {
-  let id = to;
+  let id = to === '@map' ? state.map.node : to;
   if (state.stats.hp <= 0) id = 'end_flatline';
   else if (state.stats.heat >= 100) id = 'end_caught';
   let node = STORY[id];
@@ -58,6 +67,9 @@ export function goTo(state, to) {
     const hit = node.route.find((r) => !r.if || meets(r.if, state));
     id = hit.to;
     node = STORY[id];
+  }
+  if (node.map && (!state.map || state.map.id !== node.map)) {
+    return { ...state, node: id, map: { id: node.map, node: id, ...spawnOf(node.map), taken: [], done: [] } };
   }
   return { ...state, node: id };
 }
