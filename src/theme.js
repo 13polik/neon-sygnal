@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { sfx } from './audio';
 
 export const C = {
   bg: '#07080f',
@@ -20,9 +21,15 @@ export const F = {
   bold: 'ChakraPetch_700Bold',
 };
 
-// Wibracje działają tylko na telefonie, w przeglądarce są pomijane
-export function buzz(kind) {
-  if (Platform.OS === 'web') return;
+let haptics = true;
+export const setHaptics = (on) => (haptics = on);
+
+// Wibracja i dźwięk naraz. sound nadpisuje domyślny dźwięk, null go wyłącza.
+// Wibracje działają tylko na telefonie, w przeglądarce są pomijane.
+export function buzz(kind, sound) {
+  const name = sound === undefined ? (kind === 'ok' ? 'ok' : kind === 'bad' ? 'bad' : 'tap') : sound;
+  if (name) sfx(name);
+  if (!haptics || Platform.OS === 'web') return;
   try {
     if (kind === 'ok') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     else if (kind === 'bad') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

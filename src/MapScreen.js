@@ -145,7 +145,7 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
       for (const pk of world.pickups) {
         if (!taken.current.has(pk.key) && Math.hypot(pk.x - p.x, pk.y - p.y) < 24) {
           taken.current.add(pk.key);
-          buzz();
+          buzz('tap', 'pickup');
           cb.current.onPickup(pk.key, map.cash, { x: p.x, y: p.y });
         }
       }
@@ -153,7 +153,7 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
       for (const sh of world.shards) {
         if (!taken.current.has(sh.key) && Math.hypot(sh.x - p.x, sh.y - p.y) < 24) {
           taken.current.add(sh.key);
-          buzz('ok');
+          buzz('ok', 'shard');
           cb.current.onShard(sh.key, { x: p.x, y: p.y });
           return;
         }
@@ -173,7 +173,7 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
           if (d.meter >= 1) {
             d.meter = 0;
             d.cool = 3;
-            buzz('bad');
+            buzz('bad', 'alarm');
             cb.current.onSpotted({ x: p.x, y: p.y });
           }
         } else {
@@ -186,7 +186,7 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
       if (ch !== nearCh) {
         nearCh = ch;
         setNear(ch);
-        if (ch) buzz();
+        if (ch) buzz('tap', null);
       }
       setFrame((f) => (f + 1) % 1e6);
       raf = requestAnimationFrame(step);

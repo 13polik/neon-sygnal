@@ -248,7 +248,7 @@ export function ChaseGame({ level, mods = [], onDone }) {
           o.hit = true;
           g.hits++;
           g.flash = 0.4;
-          buzz('bad');
+          buzz('bad', 'hit');
         }
       }
       g.obs = g.obs.filter((o) => o.y < size.height + 20);
@@ -366,7 +366,7 @@ export function DuelGame({ level, mods = [], onDone }) {
     g.current.armed = false;
     if (tap === g.current.side) {
       g.current.blocks++;
-      buzz();
+      buzz('tap', 'block');
       show('block');
       if (g.current.blocks >= need) {
         buzz('ok');
@@ -377,7 +377,7 @@ export function DuelGame({ level, mods = [], onDone }) {
       } else later(500, attack);
     } else {
       g.current.hits++;
-      buzz('bad');
+      buzz('bad', 'hit');
       show('hit');
       if (g.current.hits >= maxHits) {
         later(600, () => {
