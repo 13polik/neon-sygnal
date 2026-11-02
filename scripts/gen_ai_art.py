@@ -86,6 +86,19 @@ PORTRAITS = {
 }
 
 
+# Pionowe kadry 9:16 do filmu intro (scripts/gen_intro.py)
+INTRO = {
+    'in_storm': 'vertical cinematic shot, lightning storm over a dense neon cyberpunk slum city at night, heavy rain, dark clouds, glowing windows below',
+    'in_spires': 'vertical cinematic shot, skyline of many tall glass corporate skyscrapers rising above a sea of white clouds at golden sunrise, red aviation lights on the rooftops, birds, photorealistic',
+    'in_aerial': 'vertical aerial shot looking down into a flooded neon cyberpunk city street at night from high above, rain, pink and cyan signs reflected in water',
+    'in_street': 'vertical cinematic shot, lone hooded courier walking toward camera through a flooded neon street at night, heavy rain, reflections, pink and cyan signs',
+    'in_drone': 'vertical cinematic shot, police surveillance drone hovering above a rainy neon street with a red searchlight beam cutting through the rain',
+    'in_chip': 'vertical extreme close-up of an open hand holding a tiny glowing pink data chip in the rain, dark background, bokeh neon lights',
+    'in_mira': 'vertical close-up portrait of a ghostly translucent young woman made of pink holographic light, sad eyes, digital glitch, dark background',
+    'in_title': 'vertical cinematic shot, dark cyberpunk city skyline at night in heavy rain, distant neon lights, fog, moody, empty space in the center',
+}
+
+
 def jobs():
     for i, (k, p) in enumerate(SCENES.items()):
         yield k, f'{p}, {STYLE}', 1024, 576, 100 + i
@@ -93,6 +106,8 @@ def jobs():
         yield k, f'{p}, {MEMORY}', 1024, 576, 200 + i
     for i, (k, p) in enumerate(PORTRAITS.items()):
         yield k, f'{p}, {PORTRAIT}', 512, 512, 300 + i
+    for i, (k, p) in enumerate(INTRO.items()):
+        yield k, f'{p}, {STYLE}', 720, 1280, 400 + i
 
 
 def fetch(prompt, w, h, seed):
