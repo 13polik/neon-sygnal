@@ -14,7 +14,6 @@ import SceneArt, { artFor, castFor } from './src/SceneArt';
 import { initAudio, playMusic, setAudioOptions } from './src/audio';
 import { DEFAULT_SETTINGS, TEXT_SPEED, loadSettings, saveSettings } from './src/settings';
 import { ICONS, currentIcon, iconSupported, setIcon } from './src/appIcon';
-import Intro from './src/Intro';
 
 const DELTA_LABEL = { credits: 'kr', heat: 'Ślad', hp: 'Zdrowie', trust: 'Zaufanie Miry' };
 const GAME_LABEL = { hack: 'WŁAM', timing: 'REFLEKS', chase: 'POŚCIG', duel: 'POJEDYNEK' };
@@ -42,7 +41,7 @@ export default function App() {
 
   // Podkład muzyczny zależy od ekranu: spokojny w opowieści, napięty w minigrach
   useEffect(() => {
-    playMusic(screen === 'game' ? 'tension' : ['ending', 'intro', 'intro_view'].includes(screen) ? null : 'ambient');
+    playMusic(screen === 'game' ? 'tension' : screen === 'ending' ? null : 'ambient');
   }, [screen]);
 
   function applySettings(next) {
@@ -99,8 +98,6 @@ export default function App() {
   };
 
   const start = () => enter(newGame(), []);
-  // Nowa gra zaczyna się od filmu intro (można wyłączyć w ustawieniach)
-  const newGameWithIntro = () => (settings.intro ? setScreen('intro') : start());
 
   // Mapa: wejście do miejsca, podniesienie kredytów, wykrycie przez drona
   const enterPoi = (ch, p) => {
@@ -147,18 +144,14 @@ export default function App() {
       <TitleScreen
         saved={saved}
         found={endings.length}
-        onNew={newGameWithIntro}
+        onNew={start}
         onContinue={() => enter(saved, [])}
         onEndings={() => setScreen('endings')}
         onSettings={() => setScreen('settings')}
       />
     );
-  } else if (screen === 'intro') {
-    body = <Intro onDone={start} />;
-  } else if (screen === 'intro_view') {
-    body = <Intro onDone={() => setScreen('settings')} />;
   } else if (screen === 'settings') {
-    body = <SettingsScreen settings={settings} onChange={changeSetting} onIntro={() => setScreen('intro_view')} onBack={() => setScreen('title')} />;
+    body = <SettingsScreen settings={settings} onChange={changeSetting} onBack={() => setScreen('title')} />;
   } else if (screen === 'endings') {
     body = <EndingsScreen found={endings} onBack={() => setScreen('title')} />;
   } else if (screen === 'game') {
@@ -203,16 +196,6 @@ export default function App() {
         onJournal={() => setJournal(true)}
         onMenu={() => setScreen('title')}
       />
-    );
-  }
-
-  // Film intro dostaje cały ekran, bez marginesów i paska stanu
-  if (screen === 'intro' || screen === 'intro_view') {
-    return (
-      <SafeAreaProvider>
-        <StatusBar hidden />
-        <View style={{ flex: 1, backgroundColor: '#000' }}>{body}</View>
-      </SafeAreaProvider>
     );
   }
 
@@ -476,7 +459,7 @@ function IconPicker() {
   );
 }
 
-function SettingsScreen({ settings, onChange, onIntro, onBack }) {
+function SettingsScreen({ settings, onChange, onBack }) {
   return (
     <View style={[s.page, { paddingVertical: 24 }]}>
       <Text style={s.chapter}>USTAWIENIA</Text>
@@ -484,7 +467,6 @@ function SettingsScreen({ settings, onChange, onIntro, onBack }) {
         <Toggle label="Muzyka" value={settings.music} onChange={(v) => onChange('music', v)} />
         <Toggle label="Dźwięki" value={settings.sound} onChange={(v) => onChange('sound', v)} />
         <Toggle label="Wibracje" value={settings.haptics} onChange={(v) => onChange('haptics', v)} />
-        <Toggle label="Film intro przed nową grą" value={settings.intro} onChange={(v) => onChange('intro', v)} />
         <Choice
           label="Tempo pisania tekstu"
           value={settings.speed}
@@ -506,9 +488,6 @@ function SettingsScreen({ settings, onChange, onIntro, onBack }) {
           ]}
         />
         <IconPicker />
-        <View style={{ marginTop: 12 }}>
-          <Button label="Obejrzyj film intro" color={C.pink} onPress={onIntro} />
-        </View>
       </ScrollView>
       <Button label="Wróć" onPress={onBack} />
     </View>

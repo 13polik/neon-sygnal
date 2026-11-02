@@ -2,14 +2,14 @@
   "expo": {
     "name": "Neon Sygnał",
     "slug": "neon-sygnal",
-    "version": "1.8.2",
+    "version": "1.8.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.polik13.neonsygnal",
-      "buildNumber": "11"
+      "buildNumber": "12"
     },
     "android": {
       "adaptiveIcon": {
@@ -64,10 +64,105 @@
               "foregroundImage": "./assets/icons/dolina.png",
               "backgroundColor": "#07080f"
             }
+          },
+          {
+            "name": "Oko",
+            "ios": "./assets/icons/oko.png",
+            "android": {
+              "foregroundImage": "./assets/icons/oko.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Pchla",
+            "ios": "./assets/icons/pchla.png",
+            "android": {
+              "foregroundImage": "./assets/icons/pchla.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Igla",
+            "ios": "./assets/icons/igla.png",
+            "android": {
+              "foregroundImage": "./assets/icons/igla.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Gawron",
+            "ios": "./assets/icons/gawron.png",
+            "android": {
+              "foregroundImage": "./assets/icons/gawron.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Teodor",
+            "ios": "./assets/icons/teodor.png",
+            "android": {
+              "foregroundImage": "./assets/icons/teodor.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Wren",
+            "ios": "./assets/icons/wren.png",
+            "android": {
+              "foregroundImage": "./assets/icons/wren.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Prezes",
+            "ios": "./assets/icons/prezes.png",
+            "android": {
+              "foregroundImage": "./assets/icons/prezes.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Iglica",
+            "ios": "./assets/icons/iglica.png",
+            "android": {
+              "foregroundImage": "./assets/icons/iglica.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Chip",
+            "ios": "./assets/icons/chip.png",
+            "android": {
+              "foregroundImage": "./assets/icons/chip.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Poscig",
+            "ios": "./assets/icons/poscig.png",
+            "android": {
+              "foregroundImage": "./assets/icons/poscig.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Sygnal",
+            "ios": "./assets/icons/sygnal.png",
+            "android": {
+              "foregroundImage": "./assets/icons/sygnal.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Retro",
+            "ios": "./assets/icons/retro.png",
+            "android": {
+              "foregroundImage": "./assets/icons/retro.png",
+              "backgroundColor": "#07080f"
+            }
           }
         ]
-      ],
-      "expo-asset"
+      ]
     ],
     "backgroundColor": "#07080f"
   }
