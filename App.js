@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts, ChakraPetch_400Regular, ChakraPetch_500Medium, ChakraPetch_700Bold } from '@expo-google-fonts/chakra-petch';
@@ -13,6 +13,7 @@ import { C, F, buzz, setHaptics } from './src/theme';
 import SceneArt, { artFor, castFor } from './src/SceneArt';
 import { initAudio, playMusic, setAudioOptions } from './src/audio';
 import { DEFAULT_SETTINGS, TEXT_SPEED, loadSettings, saveSettings } from './src/settings';
+import { ICONS, currentIcon, iconSupported, setIcon } from './src/appIcon';
 
 const DELTA_LABEL = { credits: 'kr', heat: 'Ślad', hp: 'Zdrowie', trust: 'Zaufanie Miry' };
 const GAME_LABEL = { hack: 'WŁAM', timing: 'REFLEKS', chase: 'POŚCIG', duel: 'POJEDYNEK' };
@@ -432,6 +433,32 @@ function Choice({ label, options, value, onChange }) {
   );
 }
 
+function IconPicker() {
+  const [icon, setCurrent] = useState(currentIcon());
+  const supported = iconSupported();
+  const pick = async (key) => {
+    buzz();
+    if (await setIcon(key)) setCurrent(key);
+  };
+  return (
+    <View style={{ gap: 8, paddingVertical: 10 }}>
+      <Text style={s.setLabel}>Ikona aplikacji</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+        {ICONS.map((ic) => {
+          const active = supported && icon === ic.key;
+          return (
+            <Pressable key={ic.label} onPress={() => pick(ic.key)} disabled={!supported} style={{ alignItems: 'center', gap: 4, opacity: supported ? 1 : 0.5 }}>
+              <Image source={ic.thumb} style={[s.iconThumb, active && { borderColor: C.pink }]} />
+              <Text style={[s.pillText, active && { color: C.pink }]}>{ic.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {!supported ? <Text style={s.lock}>Zmiana ikony działa w zainstalowanej aplikacji, nie w podglądzie.</Text> : null}
+    </View>
+  );
+}
+
 function SettingsScreen({ settings, onChange, onBack }) {
   return (
     <View style={[s.page, { paddingVertical: 24 }]}>
@@ -460,6 +487,7 @@ function SettingsScreen({ settings, onChange, onBack }) {
             ['big', 'Duży'],
           ]}
         />
+        <IconPicker />
       </ScrollView>
       <Button label="Wróć" onPress={onBack} />
     </View>
@@ -674,4 +702,5 @@ const s = StyleSheet.create({
   knob: { position: 'absolute', top: 2, width: 20, height: 20, borderRadius: 10, backgroundColor: C.dim },
   pill: { borderWidth: 1, borderColor: C.line, paddingVertical: 8, paddingHorizontal: 14 },
   pillText: { fontFamily: F.medium, fontSize: 14, color: C.dim },
+  iconThumb: { width: 56, height: 56, borderRadius: 13, borderWidth: 2, borderColor: C.line },
 });

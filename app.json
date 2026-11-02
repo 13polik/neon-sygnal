@@ -2,14 +2,14 @@
   "expo": {
     "name": "Neon Sygnał",
     "slug": "neon-sygnal",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.polik13.neonsygnal",
-      "buildNumber": "7"
+      "buildNumber": "8"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,6 +29,43 @@
         {
           "enableBackgroundPlayback": false
         }
+      ],
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "Mira",
+            "ios": "./assets/icons/mira.png",
+            "android": {
+              "foregroundImage": "./assets/icons/mira.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Wieza",
+            "ios": "./assets/icons/wieza.png",
+            "android": {
+              "foregroundImage": "./assets/icons/wieza.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Sokol",
+            "ios": "./assets/icons/sokol.png",
+            "android": {
+              "foregroundImage": "./assets/icons/sokol.png",
+              "backgroundColor": "#07080f"
+            }
+          },
+          {
+            "name": "Dolina",
+            "ios": "./assets/icons/dolina.png",
+            "android": {
+              "foregroundImage": "./assets/icons/dolina.png",
+              "backgroundColor": "#07080f"
+            }
+          }
+        ]
       ]
     ],
     "backgroundColor": "#07080f"
