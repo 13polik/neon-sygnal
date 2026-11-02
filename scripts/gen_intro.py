@@ -386,8 +386,8 @@ if __name__ == '__main__':
     ff = imageio_ffmpeg.get_ffmpeg_exe()
     proc = subprocess.Popen(
         [ff, '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS), '-i', '-',
-         '-i', wav, '-c:v', 'libx264', '-preset', 'medium', '-crf', '21', '-pix_fmt', 'yuv420p', '-profile:v', 'high',
-         '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '128k', '-shortest', mp4],
+         '-i', wav, '-c:v', 'libx264', '-preset', 'slow', '-crf', '26', '-pix_fmt', 'yuv420p', '-profile:v', 'main', '-level', '3.1',
+         '-movflags', '+faststart', '-c:a', 'aac', '-ar', '44100', '-b:a', '128k', '-shortest', mp4],
         stdin=subprocess.PIPE,
     )
     total = int(DUR * FPS)
