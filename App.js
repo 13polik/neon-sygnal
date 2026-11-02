@@ -10,7 +10,7 @@ import { ChaseGame, DuelGame, HackGame, TimingGame } from './src/MiniGames';
 import MapScreen from './src/MapScreen';
 import { MAPS } from './src/maps';
 import { C, F, buzz, setHaptics } from './src/theme';
-import SceneArt, { artFor } from './src/SceneArt';
+import SceneArt, { artFor, castFor } from './src/SceneArt';
 import { initAudio, playMusic, setAudioOptions } from './src/audio';
 import { DEFAULT_SETTINGS, TEXT_SPEED, loadSettings, saveSettings } from './src/settings';
 
@@ -29,6 +29,7 @@ export default function App() {
   const [card, setCard] = useState(null);
   const [journal, setJournal] = useState(false);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const mapPos = useRef(null);
 
   useEffect(() => {
     loadGame().then(setSaved);
@@ -60,7 +61,7 @@ export default function App() {
     let state = next;
     const node = STORY[state.node];
     // Karta tytułowa przy wejściu do nowego rozdziału
-    if (node.chapter?.startsWith('Rozdział') && node.chapter !== state.card) {
+    if ((node.chapter?.startsWith('Rozdział') || node.chapter?.startsWith('Prolog')) && node.chapter !== state.card) {
       state = { ...state, card: node.chapter };
       setCard(node.chapter);
     }
@@ -113,6 +114,15 @@ export default function App() {
     });
   };
 
+  // Rozmowa z Mirą z dziennika; '@return' wraca do bieżącej sceny albo na mapę
+  const canTalk = game?.flags.includes('mira') && ['story', 'map'].includes(screen) && !game.node.startsWith('mt_') && game.node !== 'mira_talk';
+  const talk = () => {
+    setJournal(false);
+    const onMap = screen === 'map';
+    const map = onMap && mapPos.current ? { ...game.map, ...mapPos.current } : game.map;
+    enter(goTo({ ...game, map, ret: onMap ? '@map' : game.node }, 'mira_talk'), []);
+  };
+
   const shard = (key, p) => {
     const next = { ...game, map: { ...game.map, ...p, taken: [...game.map.taken, key] } };
     enter(goTo(next, `memory_${memoryCount(game) + 1}`), []);
@@ -163,6 +173,7 @@ export default function App() {
           mstate={game.map}
           game={game}
           paused={journal}
+          posOut={mapPos}
           objective={objective(game)}
           onPoi={enterPoi}
           onPickup={pickup}
@@ -191,8 +202,8 @@ export default function App() {
     <SafeAreaProvider>
       <SafeAreaView style={s.root}>
         <StatusBar style="light" />
-        {body}
-        {journal && game ? <Journal game={game} onClose={() => setJournal(false)} /> : null}
+        <FadeIn key={screen === 'story' ? 'story' : screen}>{body}</FadeIn>
+        {journal && game ? <Journal game={game} onClose={() => setJournal(false)} onTalk={canTalk ? talk : null} /> : null}
         {card && ['story', 'map'].includes(screen) ? <ChapterCard chapter={card} onDone={() => setCard(null)} /> : null}
       </SafeAreaView>
     </SafeAreaProvider>
@@ -215,6 +226,15 @@ function Flicker({ children, style }) {
     return () => loop.stop();
   }, [o]);
   return <Animated.Text style={[style, { opacity: o }]}>{children}</Animated.Text>;
+}
+
+// Łagodne pojawienie się ekranu przy każdej zmianie widoku
+function FadeIn({ children }) {
+  const o = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(o, { toValue: 1, duration: 260, useNativeDriver: true }).start();
+  }, [o]);
+  return <Animated.View style={{ flex: 1, opacity: o }}>{children}</Animated.View>;
 }
 
 function TopRow({ label, onJournal, onMenu }) {
@@ -258,7 +278,7 @@ function ChapterCard({ chapter, onDone }) {
   );
 }
 
-function Journal({ game, onClose }) {
+function Journal({ game, onClose, onTalk }) {
   const f = (x) => game.flags.includes(x);
   const mem = memoryCount(game);
   const sections = [
@@ -277,11 +297,50 @@ function Journal({ game, onClose }) {
           ],
         ]
       : null,
-    ['Przedmioty', [f('lamp') && !f('key') && 'Lampa mocy', f('key') && 'Klucz Oka do serwera Iglicy', f('archive') && 'Lista 4312 nazwisk z archiwum', f('wren_card') && 'Karta dostępu Wren']],
+    [
+      'Przedmioty i dowody',
+      [
+        f('lamp') && !f('key') && 'Lampa mocy',
+        f('key') && 'Klucz Oka do serwera Iglicy',
+        f('diary') && 'Dziennik Hani',
+        f('photo') && 'Zdjęcie sióstr na wieży',
+        f('stream_proof') && 'Nagranie z wszczepu pana Józefa',
+        f('van_proof') && 'Nagranie transmisji z vana Halcyonu',
+        f('igla_proof') && 'Nagranie Igły: prasa i Sokół',
+        f('archive') && 'Lista 4312 nazwisk z archiwum',
+        f('wren_card') && 'Karta dostępu Wren',
+        f('service_pass') && 'Przepustka serwisowa Bruna',
+        f('watch') && !f('kind_teodor') && 'Zegarek Teodora',
+      ],
+    ],
     ['Wszczepy', Object.entries(IMPLANTS).map(([k, v]) => f(k) && v)],
     [
+      'Zadania poboczne',
+      [
+        f('quest_meds') && !f('halina_meds_done') && 'Leki na serce dla pani Haliny. Igła z kliniki może je zrobić.',
+        f('ig_quest') && !f('igla_proof') && 'Akta Igły wiezie kurier Halcyonu przez Posterunek.',
+        f('pc_kuba_q') && !f('kuba_found') && 'Kuba, gołąb Pchły, może być w kontenerze przy Posterunku.',
+        f('kr_brother_q') && !f('witek_seen') && 'Odwiedź Witka, brata Kreta, na Szóstej Śluzie.',
+        f('kr_msg') && !f('kruki_peace') && !f('kruki_war') && 'Zanieś wiadomość Kreta Gawronowi na bazar.',
+        f('amp_quest') && !f('amp') && `Wzmacniacz dla Oka: cewka od Sroki${f('amp_coil') ? ' (jest)' : ''}, akumulator od Pchły${f('amp_battery') ? ' (jest)' : ''}.`,
+        f('fake_plan') && !f('fake_chip') && 'Fałszywy chip u Sroki na bazarze (200 kr).',
+        f('van_tip') && !f('van_proof') && 'Biały van Halcyonu staje przy Śluzie o trzeciej w nocy (Posterunek).',
+      ],
+    ],
+    [
       'Sojusznicy i wiedza',
-      [f('rats_deal') && 'Szczury odetną prąd na piętrze Iglicy.', f('sokol_known') && 'Bruno ostrzegł cię przed agentem Sokołem.', f('oko_quest') && !f('lamp') && 'Oko czeka na lampę mocy.'],
+      [
+        f('rats_deal') && 'Szczury odetną prąd na piętrze Iglicy.',
+        f('gangs_united') && 'Szczury i Kruki zawarły pokój i stoją za tobą.',
+        f('sokol_known') && 'Bruno ostrzegł cię przed agentem Sokołem.',
+        f('sokol_past') && 'Sokół to Tomasz Lis z Portu Południowego. Jego siostra Marta zginęła w powodzi.',
+        f('fake_chip') && 'Masz fałszywy chip od Sroki.',
+        f('pchla_friend') && 'Pchła i jego gołąb Kuba są po twojej stronie.',
+        f('oko_quest') && !f('lamp') && 'Oko czeka na lampę mocy.',
+        f('amp') && 'Wieża ma wzmacniacz. Sygnał dotrze do całego miasta.',
+        f('summit_key') && 'Masz klucz Edwarda do windy na szczyt Iglicy.',
+        f('uniform') && 'Masz białą kurtkę ochrony. Drony w Iglicy widzą cię wolniej.',
+      ],
     ],
   ]
     .filter(Boolean)
@@ -296,6 +355,7 @@ function Journal({ game, onClose }) {
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={{ gap: 22, paddingVertical: 16 }}>
+        {onTalk ? <Button label="Porozmawiaj z Mirą" color={C.pink} onPress={onTalk} /> : null}
         {sections.map(([title, lines]) => (
           <View key={title} style={{ gap: 6 }}>
             <Text style={s.kicker}>{title.toUpperCase()}</Text>
@@ -501,7 +561,7 @@ function StoryScreen({ game, deltas, hold, settings, onChoose, onJournal, onMenu
       ) : null}
       <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
         <View style={[s.bleed, { marginTop: 8 }]}>
-          <SceneArt art={artFor(game.node)} />
+          <SceneArt art={artFor(game.node)} cast={castFor(game.node)} />
         </View>
         <Pressable onPress={() => setShown(full.length)}>
           <Text style={[s.story, settings.big && s.storyBig]}>
@@ -547,7 +607,7 @@ function EndingScreen({ node, game, found, onAgain, onMenu }) {
     <View style={[s.page, { paddingBottom: 24 }]}>
       <ScrollView style={{ flex: 1 }}>
         <View style={s.bleed}>
-          <SceneArt art={artFor(game.node)} />
+          <SceneArt art={artFor(game.node)} cast={castFor(game.node)} />
         </View>
         <Text style={[s.kicker, { marginTop: 12 }]}>ZAKOŃCZENIE</Text>
         <Flicker style={[s.endTitle, { color: e.key === 'name' ? C.yellow : e.key === 'signal' ? C.cyan : C.pink }]}>{e.title}</Flicker>

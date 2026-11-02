@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MAPS, TILE } from './maps';
 import { meets } from './engine';
 import { C, F, buzz } from './theme';
@@ -8,43 +8,17 @@ const PR = 10; // promień gracza
 const SPEED = 125; // piksele na sekundę
 const NEAR = 36; // odległość, z której można wejść do miejsca
 const JOY = 50; // zasięg joysticka
-const NEON = [C.pink, C.cyan, '#8a5cff', C.yellow];
-
-// Łączy sąsiednie pola '#' w prostokąty, żeby rysować mniej elementów
-function buildWalls(grid) {
-  const rects = [];
-  let open = {};
-  grid.forEach((row, r) => {
-    const next = {};
-    let c = 0;
-    while (c < row.length) {
-      if (row[c] !== '#') {
-        c++;
-        continue;
-      }
-      const c0 = c;
-      while (c < row.length && row[c] === '#') c++;
-      const key = `${c0}-${c - 1}`;
-      if (open[key]) {
-        open[key].h++;
-        next[key] = open[key];
-      } else {
-        const rect = { c: c0, r, w: c - c0, h: 1 };
-        rects.push(rect);
-        next[key] = rect;
-      }
-    }
-    open = next;
-  });
-  return rects;
-}
+// Tła map są renderowane skryptem scripts/gen_maps.py z tych samych siatek co kolizje
+const MAP_ART = {
+  dolina: require('../assets/maps/dolina.jpg'),
+  iglica: require('../assets/maps/iglica.jpg'),
+};
 
 function parse(map) {
   const spawn = { x: TILE * 1.5, y: TILE * 1.5 };
   const pickups = [];
   const shards = [];
   const pois = [];
-  const puddles = [];
   map.grid.forEach((row, r) =>
     [...row].forEach((ch, c) => {
       const x = c * TILE + TILE / 2;
@@ -53,7 +27,6 @@ function parse(map) {
       else if (ch === '$') pickups.push({ key: `${c},${r}`, x, y });
       else if (ch === 'M') shards.push({ key: `m${c},${r}`, x, y });
       else if (map.pois[ch]) pois.push({ ch, x, y, ...map.pois[ch] });
-      if (ch !== '#' && (c * 7 + r * 3) % 11 === 0) puddles.push({ x, y, w: 26 + ((c * r) % 3) * 10 });
     })
   );
   return {
@@ -61,8 +34,6 @@ function parse(map) {
     pickups,
     shards,
     pois,
-    puddles,
-    walls: buildWalls(map.grid),
     w: map.grid[0].length * TILE,
     h: map.grid.length * TILE,
   };
@@ -89,11 +60,12 @@ function sees(grid, ax, ay, bx, by) {
   return true;
 }
 
-export default function MapScreen({ mapId, mstate, game, paused, objective = { text: '' }, onPoi, onPickup, onShard, onSpotted }) {
+export default function MapScreen({ mapId, mstate, game, paused, posOut, objective = { text: '' }, onPoi, onPickup, onShard, onSpotted }) {
   const map = MAPS[mapId];
   const world = useMemo(() => parse(map), [map]);
   const pos = useRef({ x: mstate.x, y: mstate.y });
   const joy = useRef(null);
+  const face = useRef(90);
   const taken = useRef(new Set(mstate.taken));
   const drones = useRef(
     map.drones.filter((d) => !(d.unless && game.flags.includes(d.unless))).map((d) => {
@@ -110,7 +82,14 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
   const [near, setNear] = useState(null);
   const [toast, setToast] = useState(null);
   const cb = useRef({});
-  cb.current = { onPickup, onShard, onSpotted, paused, jammer: game.flags.includes('jammer') };
+  cb.current = {
+    onPickup,
+    onShard,
+    onSpotted,
+    paused,
+    jammer: game.flags.includes('jammer'),
+    disguise: mapId === 'iglica' && game.flags.includes('uniform'),
+  };
 
   const toastTimer = useRef(null);
   const flash = (text, color) => {
@@ -127,6 +106,7 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
       const dt = last == null || cb.current.paused ? 0 : Math.min(0.05, (t - last) / 1000);
       last = t;
       const p = pos.current;
+      if (posOut) posOut.current = { x: p.x, y: p.y };
       if (cb.current.paused) {
         raf = requestAnimationFrame(step);
         return;
@@ -138,6 +118,7 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
         const k = Math.min(1, len / JOY) / len;
         const mx = j.dx * k * SPEED * dt;
         const my = j.dy * k * SPEED * dt;
+        face.current = (Math.atan2(j.dy, j.dx) * 180) / Math.PI;
         if (!blocked(map.grid, p.x + mx, p.y)) p.x += mx;
         if (!blocked(map.grid, p.x, p.y + my)) p.y += my;
       }
@@ -169,7 +150,7 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
           d.cool -= dt;
           d.meter = 0;
         } else if (Math.hypot(d.x - p.x, d.y - p.y) < d.r && sees(map.grid, d.x, d.y, p.x, p.y)) {
-          d.meter += dt * (cb.current.jammer ? 0.6 : 1.2);
+          d.meter += dt * 1.2 * (cb.current.jammer ? 0.5 : 1) * (cb.current.disguise ? 0.5 : 1);
           if (d.meter >= 1) {
             d.meter = 0;
             d.cool = 3;
@@ -231,20 +212,7 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
 
       <View style={s.viewport} onLayout={(e) => setView({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         <View style={[s.world, { width: world.w, height: world.h, transform: [{ translateX: -camX }, { translateY: -camY }] }]}>
-          {world.puddles.map((d, i) => (
-            <View key={`p${i}`} style={[s.puddle, { left: d.x - d.w / 2, top: d.y - 6, width: d.w }]} />
-          ))}
-          {world.walls.map((w, i) => (
-            <View
-              key={`w${i}`}
-              style={[s.wall, { left: w.c * TILE, top: w.r * TILE, width: w.w * TILE, height: w.h * TILE, borderColor: NEON[i % NEON.length] + '55' }]}
-            />
-          ))}
-          {map.signs.map((g, i) => (
-            <Text key={`s${i}`} numberOfLines={1} style={[s.sign, { left: g.c * TILE + 4, top: g.r * TILE + 13, color: C[g.color], textShadowColor: C[g.color] }]}>
-              {g.text}
-            </Text>
-          ))}
+          <Image source={MAP_ART[mapId]} style={{ position: 'absolute', left: 0, top: 0, width: world.w, height: world.h }} />
           {world.pickups.map((pk) =>
             taken.current.has(pk.key) ? null : <View key={pk.key} style={[s.chip, { left: pk.x - 6, top: pk.y - 6 }]} />
           )}
@@ -258,8 +226,8 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
           {world.pois.map((o) => {
             const done = o.once && mstate.done.includes(o.ch);
             return (
-              <View key={o.ch} style={[s.poiWrap, { left: o.x - 70, top: o.y - 38 }]} pointerEvents="none">
-                <Text numberOfLines={1} style={[s.poiLabel, done && { color: C.dim }]}>
+              <View key={o.ch} style={[s.poiWrap, { left: o.x - 70, top: o.y - 42 }]} pointerEvents="none">
+                <Text numberOfLines={1} style={[s.poiLabel, done && { color: C.dim, borderColor: C.line }]}>
                   {o.label}
                 </Text>
                 <View style={[s.poi, done && { borderColor: C.dim }, near === o.ch && !done && s.poiNear]} />
@@ -282,7 +250,13 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
                   },
                 ]}
               />
-              <View style={[s.drone, { left: d.x - 7, top: d.y - 7 }]} />
+              <View style={[s.droneShadow, { left: d.x - 6, top: d.y + 10 }]} />
+              {[-1, 1].map((ax) =>
+                [-1, 1].map((ay) => <View key={`${ax}${ay}`} style={[s.rotor, { left: d.x + ax * 9 - 6, top: d.y + ay * 9 - 6 }]} />)
+              )}
+              <View style={[s.drone, { left: d.x - 8, top: d.y - 8 }]}>
+                <View style={[s.droneEye, d.meter > 0 && { backgroundColor: '#fff' }]} />
+              </View>
               {d.meter > 0 ? (
                 <View style={[s.meterBg, { left: d.x - 16, top: d.y - 20 }]}>
                   <View style={[s.meterFill, { width: 32 * d.meter }]} />
@@ -290,7 +264,13 @@ export default function MapScreen({ mapId, mstate, game, paused, objective = { t
               ) : null}
             </View>
           ))}
-          <View style={[s.player, { left: p.x - PR, top: p.y - PR }]} />
+          <View style={[s.playerGlow, { left: p.x - 24, top: p.y - 24 }]} pointerEvents="none" />
+          <View style={[s.pShadow, { left: p.x - 10, top: p.y + 4 }]} pointerEvents="none" />
+          <View style={[s.player, { left: p.x - 14, top: p.y - 14, transform: [{ rotate: `${face.current + 90}deg` }] }]} pointerEvents="none">
+            <View style={s.shoulders} />
+            <View style={s.hood} />
+            <View style={s.nose} />
+          </View>
           {arrow != null ? (
             <View
               pointerEvents="none"
@@ -354,9 +334,6 @@ const s = StyleSheet.create({
   objective: { fontFamily: F.regular, fontSize: 13, color: C.text },
   viewport: { flex: 1, overflow: 'hidden', backgroundColor: '#05060b', borderWidth: 1, borderColor: C.line, marginBottom: 8 },
   world: { position: 'absolute', left: 0, top: 0, backgroundColor: '#0b0c16' },
-  puddle: { position: 'absolute', height: 12, borderRadius: 6, backgroundColor: 'rgba(46,242,255,0.07)' },
-  wall: { position: 'absolute', backgroundColor: '#121427', borderWidth: 1 },
-  sign: { position: 'absolute', fontFamily: F.bold, fontSize: 10, letterSpacing: 1, textShadowRadius: 6, textShadowOffset: { width: 0, height: 0 } },
   shardGlow: { position: 'absolute', width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,46,136,0.25)', alignItems: 'center', justifyContent: 'center' },
   shard: { width: 12, height: 18, backgroundColor: C.pink, transform: [{ rotate: '20deg' }] },
   arrow: {
@@ -372,23 +349,43 @@ const s = StyleSheet.create({
   },
   chip: { position: 'absolute', width: 12, height: 12, borderWidth: 2, borderColor: C.yellow, transform: [{ rotate: '45deg' }] },
   poiWrap: { position: 'absolute', width: 140, alignItems: 'center' },
-  poiLabel: { fontFamily: F.bold, fontSize: 11, color: C.pink, letterSpacing: 1, marginBottom: 2 },
+  poiLabel: {
+    fontFamily: F.bold,
+    fontSize: 11,
+    color: C.pink,
+    letterSpacing: 1,
+    marginBottom: 3,
+    backgroundColor: 'rgba(7,8,15,0.8)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,46,136,0.5)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
   poi: { width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: C.pink },
   poiNear: { backgroundColor: 'rgba(255,46,136,0.3)' },
-  vision: { position: 'absolute', borderWidth: 1 },
-  drone: { position: 'absolute', width: 14, height: 14, backgroundColor: C.red, transform: [{ rotate: '45deg' }] },
+  vision: { position: 'absolute', borderWidth: 1, borderStyle: 'dashed' },
+  drone: { position: 'absolute', width: 16, height: 16, borderRadius: 8, backgroundColor: '#1c1e2a', borderWidth: 2, borderColor: '#4a4e60', alignItems: 'center', justifyContent: 'center' },
+  droneEye: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.red },
+  droneShadow: { position: 'absolute', width: 12, height: 6, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.45)' },
+  rotor: { position: 'absolute', width: 12, height: 12, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(200,210,230,0.55)', backgroundColor: 'rgba(200,210,230,0.12)' },
   meterBg: { position: 'absolute', width: 32, height: 4, backgroundColor: C.line },
   meterFill: { height: 4, backgroundColor: C.red },
-  player: {
+  playerGlow: { position: 'absolute', width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,210,63,0.16)' },
+  pShadow: { position: 'absolute', width: 20, height: 10, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)' },
+  player: { position: 'absolute', width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  shoulders: { position: 'absolute', width: 26, height: 14, borderRadius: 7, backgroundColor: '#22232e', borderWidth: 2, borderColor: C.yellow },
+  hood: { width: 13, height: 13, borderRadius: 7, backgroundColor: '#0d0e14', borderWidth: 1, borderColor: '#5a5c6a' },
+  nose: {
     position: 'absolute',
-    width: PR * 2,
-    height: PR * 2,
-    borderRadius: PR,
-    backgroundColor: C.yellow,
-    shadowColor: C.yellow,
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
+    top: -2,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderBottomWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: C.yellow,
   },
   joyRing: { position: 'absolute', width: JOY * 2, height: JOY * 2, borderRadius: JOY, borderWidth: 2, borderColor: 'rgba(46,242,255,0.5)' },
   joyKnob: { position: 'absolute', width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(46,242,255,0.45)' },

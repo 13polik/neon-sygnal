@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { C, F, buzz } from './theme';
 
 // Reakcja w chwili dotknięcia ekranu, bez opóźnienia, jakie ma Pressable
@@ -19,14 +19,47 @@ const shuffle = (a) => {
   return r;
 };
 
-// Wspólna rama: instrukcja -> gra -> wynik
-function Frame({ title, color, rules, phase, won, onStart, onDone, winText, loseText, children }) {
+// Wstrząs ekranu przy trafieniu albo pomyłce
+function useShake() {
+  const x = useRef(new Animated.Value(0)).current;
+  const shake = () =>
+    Animated.sequence([12, -10, 7, -4, 0].map((v) => Animated.timing(x, { toValue: v, duration: 45, useNativeDriver: true }))).start();
+  return [x, shake];
+}
+
+// Wspólna rama: instrukcja -> odliczanie -> gra -> wynik
+function Frame({ title, color, rules, phase, won, onStart, onDone, winText, loseText, shakeX, children }) {
+  const [count, setCount] = useState(null);
+  const pop = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (count == null) return;
+    pop.setValue(1.6);
+    Animated.timing(pop, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+    buzz('tap');
+    const t = setTimeout(() => {
+      if (count > 1) setCount(count - 1);
+      else {
+        setCount(null);
+        onStart();
+      }
+    }, 650);
+    return () => clearTimeout(t);
+  }, [count]);
+
+  if (phase === 'intro' && count != null) {
+    return (
+      <View style={s.wrap}>
+        <Animated.Text style={[s.count, { color, transform: [{ scale: pop }] }]}>{count}</Animated.Text>
+      </View>
+    );
+  }
   if (phase === 'intro') {
     return (
       <View style={s.wrap}>
         <Text style={[s.tag, { color }]}>{title}</Text>
         <Text style={s.rules}>{rules}</Text>
-        <Pressable style={[s.btn, { borderColor: color }]} onPress={onStart}>
+        <Pressable style={[s.btn, { borderColor: color }]} onPress={() => setCount(3)}>
           <Text style={[s.btnText, { color }]}>START</Text>
         </Pressable>
       </View>
@@ -43,7 +76,7 @@ function Frame({ title, color, rules, phase, won, onStart, onDone, winText, lose
       </View>
     );
   }
-  return <View style={s.wrap}>{children}</View>;
+  return <Animated.View style={[s.wrap, shakeX && { transform: [{ translateX: shakeX }] }]}>{children}</Animated.View>;
 }
 
 export function HackGame({ level, mods = [], onDone }) {
@@ -62,6 +95,7 @@ export function HackGame({ level, mods = [], onDone }) {
   const [idx, setIdx] = useState(0);
   const [time, setTime] = useState(total);
   const [wrong, setWrong] = useState(-1);
+  const [shakeX, shake] = useShake();
 
   useEffect(() => {
     if (phase !== 'play') return;
@@ -88,6 +122,7 @@ export function HackGame({ level, mods = [], onDone }) {
       setIdx(idx + 1);
     } else {
       buzz('bad');
+      shake();
       setWrong(i);
       setTime((t) => Math.max(0, t - 2));
       setTimeout(() => setWrong(-1), 250);
@@ -105,6 +140,7 @@ export function HackGame({ level, mods = [], onDone }) {
       onDone={onDone}
       winText="DOSTĘP PRZYZNANY"
       loseText="DOSTĘP ODRZUCONY"
+      shakeX={shakeX}
     >
       <View style={s.seq}>
         {target.map((c, i) => (
@@ -140,6 +176,7 @@ export function TimingGame({ level, mods = [], onDone }) {
   const speed = useRef((0.7 + level * 0.3) * (slow ? 0.75 : 1));
   const width = 0.26 - level * 0.05 + (slow ? 0.05 : 0);
   const [zone, setZone] = useState(() => 0.25 + Math.random() * 0.5);
+  const [shakeX, shake] = useShake();
 
   useEffect(() => {
     if (phase !== 'play') return;
@@ -174,6 +211,7 @@ export function TimingGame({ level, mods = [], onDone }) {
       }
     } else {
       buzz('bad');
+      shake();
       const m = misses + 1;
       setMisses(m);
       if (m >= 2) {
@@ -194,6 +232,7 @@ export function TimingGame({ level, mods = [], onDone }) {
       onDone={onDone}
       winText="UDAŁO SIĘ"
       loseText="NIE TYM RAZEM"
+      shakeX={shakeX}
     >
       <View style={s.tapArea} {...touchStart(tap)}>
         <Text style={s.counter}>
@@ -219,6 +258,9 @@ export function ChaseGame({ level, mods = [], onDone }) {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [, setFrame] = useState(0);
   const st = useRef({ lane: 1, obs: [], spawn: 0.6, time: 0, hits: 0, scroll: 0, id: 0, flash: 0 });
+  const [shakeX, shake] = useShake();
+  const shakeRef = useRef(shake);
+  shakeRef.current = shake;
 
   useEffect(() => {
     if (phase !== 'play' || !size.height) return;
@@ -249,6 +291,7 @@ export function ChaseGame({ level, mods = [], onDone }) {
           g.hits++;
           g.flash = 0.4;
           buzz('bad', 'hit');
+          shakeRef.current();
         }
       }
       g.obs = g.obs.filter((o) => o.y < size.height + 20);
@@ -293,6 +336,7 @@ export function ChaseGame({ level, mods = [], onDone }) {
       onDone={onDone}
       winText="ZGUBIONY OGON"
       loseText="ROZBITY MOTOR"
+      shakeX={shakeX}
     >
       <View style={s.chaseHud}>
         <View style={s.timeBar}>
@@ -306,6 +350,12 @@ export function ChaseGame({ level, mods = [], onDone }) {
         {[1, 2].map((k) =>
           dashes.map((y) => <View key={`${k}-${y}`} style={[s.dash, { left: laneW * k - 2, top: y }]} />)
         )}
+        {dashes.map((y, i) => (
+          <View key={`w${y}`} style={[s.sideWin, { left: 2, top: y, backgroundColor: i % 3 ? 'rgba(46,242,255,0.5)' : 'rgba(255,46,136,0.6)' }]} />
+        ))}
+        {dashes.map((y, i) => (
+          <View key={`e${y}`} style={[s.sideWin, { right: 2, top: y + 20, backgroundColor: i % 2 ? 'rgba(255,210,63,0.5)' : 'rgba(46,242,255,0.4)' }]} />
+        ))}
         {g.obs.map((o) =>
           o.kind === 'car' ? (
             <View key={o.id} style={[s.car, { left: laneW * o.lane + laneW / 2 - 22, top: o.y }]}>
@@ -334,6 +384,7 @@ export function DuelGame({ level, mods = [], onDone }) {
   const [won, setWon] = useState(false);
   const [view, setView] = useState({ state: 'idle', side: null, blocks: 0, hits: 0 });
   const g = useRef({ side: null, armed: false, blocks: 0, hits: 0, timers: [] });
+  const [shakeX, shake] = useShake();
 
   const later = (ms, fn) => g.current.timers.push(setTimeout(fn, ms));
   useEffect(() => () => g.current.timers.forEach(clearTimeout), []);
@@ -378,6 +429,7 @@ export function DuelGame({ level, mods = [], onDone }) {
     } else {
       g.current.hits++;
       buzz('bad', 'hit');
+      shake();
       show('hit');
       if (g.current.hits >= maxHits) {
         later(600, () => {
@@ -413,14 +465,16 @@ export function DuelGame({ level, mods = [], onDone }) {
       onDone={onDone}
       winText="SOKÓŁ LEŻY"
       loseText="POWALONY"
+      shakeX={shakeX}
     >
       <Text style={s.counter}>
         BLOKI {view.blocks}/{need}   ·   TRAFIENIA {Math.min(view.hits, maxHits - 1)}/{maxHits - 1}
       </Text>
       <View style={s.foe}>
-        <View style={[s.foeBody, view.state === 'hit' && { borderColor: C.red }, view.state === 'block' && { borderColor: C.green }]}>
-          <View style={s.foeEye} />
-        </View>
+        <Image
+          source={require('../assets/portraits/sokol.jpg')}
+          style={[s.foeBody, view.state === 'warn' && { borderColor: C.red }, view.state === 'block' && { borderColor: C.green }]}
+        />
         <Text style={[s.duelCall, { color: label[1] }]}>{label[0]}</Text>
       </View>
       <View style={s.duelRow}>
@@ -440,6 +494,8 @@ export function DuelGame({ level, mods = [], onDone }) {
 const s = StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'center', gap: 24 },
   tag: { fontFamily: F.bold, fontSize: 34, letterSpacing: 6, textAlign: 'center' },
+  count: { fontFamily: F.bold, fontSize: 120, textAlign: 'center' },
+  sideWin: { position: 'absolute', width: 6, height: 10 },
   rules: { fontFamily: F.regular, fontSize: 17, lineHeight: 26, color: C.text, textAlign: 'center' },
   result: { fontFamily: F.bold, fontSize: 28, letterSpacing: 3, textAlign: 'center' },
   btn: { borderWidth: 2, paddingVertical: 16, alignItems: 'center', alignSelf: 'center', paddingHorizontal: 48 },
@@ -470,8 +526,7 @@ const s = StyleSheet.create({
   bike: { position: 'absolute', width: 28, height: 50, backgroundColor: C.cyan, borderRadius: 8, alignItems: 'center' },
   bikeLight: { width: 14, height: 6, backgroundColor: C.yellow, marginTop: 3, borderRadius: 3 },
   foe: { alignItems: 'center', gap: 16 },
-  foeBody: { width: 70, height: 70, borderWidth: 3, borderColor: C.dim, backgroundColor: C.panel, transform: [{ rotate: '45deg' }], alignItems: 'center', justifyContent: 'center' },
-  foeEye: { width: 14, height: 14, borderRadius: 7, backgroundColor: C.red },
+  foeBody: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: C.dim, backgroundColor: C.panel },
   duelCall: { fontFamily: F.bold, fontSize: 22, letterSpacing: 3 },
   duelRow: { flexDirection: 'row', gap: 10, height: 220 },
   duelSide: { flex: 1, borderWidth: 2, borderColor: C.line, backgroundColor: C.panel, alignItems: 'center', justifyContent: 'center' },

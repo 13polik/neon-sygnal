@@ -17,6 +17,11 @@ export function meets(req, state) {
   if (req.heat != null && stats.heat < req.heat) return false;
   if (req.flag && !flags.includes(req.flag)) return false;
   if (req.notFlag && flags.includes(req.notFlag)) return false;
+  if (req.flags && !req.flags.every((f) => flags.includes(f))) return false;
+  if (req.notFlags && req.notFlags.some((f) => flags.includes(f))) return false;
+  if (req.maxHeat != null && stats.heat > req.maxHeat) return false;
+  if (req.any && !req.any.some((r) => meets(r, state))) return false;
+  if (req.atLeast && req.atLeast.flags.filter((f) => flags.includes(f)).length < req.atLeast.n) return false;
   return true;
 }
 
@@ -25,6 +30,8 @@ export function lockReason(req, state) {
   if (req.trust != null) return 'Mira ci nie ufa';
   if (req.credits != null) return `Potrzeba ${req.credits} kr`;
   if (req.flag === 'key') return 'Brak klucza Oka';
+  if (req.maxHeat != null) return 'Za wysoki ślad';
+  if (req.atLeast) return `Potrzeba ${req.atLeast.n} dowodów`;
   return 'Niedostępne';
 }
 
@@ -57,9 +64,12 @@ function spawnOf(mapId) {
   return { x: grid[r].indexOf('P') * TILE + TILE / 2, y: r * TILE + TILE / 2 };
 }
 
-// Przejście do sceny: obsługuje przekierowania, powrót na mapę ('@map') i śmierć/namierzenie
+// Przejście do sceny: obsługuje przekierowania, powrót na mapę ('@map'),
+// powrót z rozmowy z Mirą ('@return') i śmierć/namierzenie
 export function goTo(state, to) {
-  let id = to === '@map' ? state.map.node : to;
+  let id = to;
+  if (to === '@return') id = state.ret && state.ret !== '@map' ? state.ret : '@map';
+  if (id === '@map') id = state.map.node;
   if (state.stats.hp <= 0) id = 'end_flatline';
   else if (state.stats.heat >= 100) id = 'end_caught';
   let node = STORY[id];

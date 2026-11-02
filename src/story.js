@@ -8,6 +8,31 @@
 // map: scena jest mapą do chodzenia (patrz maps.js)
 // ending: scena końcowa
 
+import prolog from './arcs/prolog.js';
+import miraTalk from './arcs/mira_talk.js';
+import sluza from './arcs/sluza.js';
+import bruno from './arcs/bruno.js';
+import igla from './arcs/igla.js';
+import szczury from './arcs/szczury.js';
+import oko from './arcs/oko.js';
+import pchla from './arcs/pchla.js';
+import bazar from './arcs/bazar.js';
+import posterunek from './arcs/posterunek.js';
+import ul from './arcs/ul.js';
+import kolejka from './arcs/kolejka.js';
+import iglica from './arcs/iglica.js';
+import finale from './arcs/finale.js';
+import epilogi from './arcs/epilogi.js';
+import port from './arcs/port.js';
+import rodziny from './arcs/rodziny.js';
+import bazarExtra from './arcs/bazar_extra.js';
+import ulJobs from './arcs/ul_jobs.js';
+import miraMore from './arcs/mira_more.js';
+import iglicaMore from './arcs/iglica_more.js';
+import dolinaMore from './arcs/dolina_more.js';
+import epilogiMore from './arcs/epilogi_more.js';
+import dodatki from './arcs/dodatki.js';
+
 export const START_STATS = { credits: 120, heat: 10, hp: 3, trust: 0 };
 
 export const ENDINGS = [
@@ -15,6 +40,8 @@ export const ENDINGS = [
   { key: 'signal', title: 'Neon Sygnał' },
   { key: 'martyr', title: 'Ostatnia audycja' },
   { key: 'ghost', title: 'Duch w sieci' },
+  { key: 'deal', title: 'Umowa' },
+  { key: 'crown', title: 'Korona Iglicy' },
   { key: 'delivered', title: 'Dostarczone' },
   { key: 'ash', title: 'Popiół' },
   { key: 'rats', title: 'Cudzy problem' },
@@ -47,10 +74,10 @@ export function objective(game) {
 
 export const memoryCount = (game) => ['mem1', 'mem2', 'mem3'].filter((m) => game.flags.includes(m)).length;
 
-export const STORY = {
+const CORE = {
   // ROZDZIAŁ 1
 
-  start: {
+  bruno_call: {
     chapter: 'Rozdział 1 · Dolina',
     text:
       'Nowa Wisła, rok 2091. Deszcz nie pada tu z nieba. Ścieka z Iglic, szklanych wież korporacji, które stoją trzysta pięter nad twoją głową.\n\n' +
@@ -77,7 +104,8 @@ export const STORY = {
       'Na obudowie ktoś wydrapał igłą jedno słowo: MIRA.',
     choices: [
       { text: 'Schowaj chip i ruszaj', to: 'street' },
-      { text: 'Zapytaj, kim jest Mira', to: 'bar_ask' },
+      { text: 'Zapytaj, kim jest Mira', to: 'bar_ask', req: { notFlag: 'asked_mira' }, effect: { flag: 'asked_mira' } },
+      { text: 'Zapytaj o doktor Wren', to: 'bar_wren', req: { notFlag: 'asked_wren' }, effect: { flag: 'asked_wren' } },
       { text: 'Kup łatkę medyczną (100 kr)', to: 'bar', req: { credits: 100, notFlag: 'medkit' }, effect: { credits: -100, hp: 1, flag: 'medkit' } },
     ],
   },
@@ -85,8 +113,24 @@ export const STORY = {
   bar_ask: {
     chapter: 'Rozdział 1 · Dolina',
     text:
-      '„Za dużo pytasz” — mówi Bruno. — „Halcyon płaci mnie, ja płacę tobie. Tyle.”\n\nAle kiedy nalewa sobie wódki, ręka mu drży. Butelka stuka o szklankę trzy razy.',
-    choices: [{ text: 'Wyjdź w deszcz', to: 'street' }],
+      '„Za dużo pytasz” — mówi Bruno. — „Halcyon płaci mnie, ja płacę tobie. Tyle.”\n\nAle kiedy nalewa sobie wódki, ręka mu drży. Butelka stuka o szklankę trzy razy.\n\n' +
+      '„Słuchaj” — dodaje ciszej, nie patrząc ci w oczy. — „Jak chip zacznie do ciebie mówić, nie odpowiadaj. Ja tak zrobiłem i od tygodnia nie śpię.”',
+    choices: [
+      { text: 'Wróć do rozmowy', to: 'bar' },
+      { text: 'Wyjdź w deszcz', to: 'street' },
+    ],
+  },
+
+  bar_wren: {
+    chapter: 'Rozdział 1 · Dolina',
+    text:
+      'Bruno ściera ladę, choć jest czysta.\n\n' +
+      '„Doktor Wren. Szefowa działu badań w Halcyonie. Mówią, że to ona wymyśliła Spokój, te darmowe wszczepy na bezsenność, co je rozdawali na Śluzie.”\n\n' +
+      '„Nigdy jej nie widziałem. Zlecenia przychodzą przez pośrednika, płacą zawsze na czas. Za dobrze płacą, jeśli chcesz wiedzieć.”',
+    choices: [
+      { text: 'Wróć do rozmowy', to: 'bar' },
+      { text: 'Wyjdź w deszcz', to: 'street' },
+    ],
   },
 
   street: {
@@ -173,7 +217,31 @@ export const STORY = {
       '„Mieszkałam w Dolinie, na Szóstej Śluzie. Halcyon rozdawał za darmo wszczepy Spokój, na bezsenność. Tylko że wszczep nagrywał nasze wspomnienia.”\n\n' +
       '„Z pamięci tysięcy ludzi zbudowali mnie. Moje własne wspomnienia są gdzieś pomieszane z cudzymi. Czasem coś mi się przypomina, kiedy jestem blisko miejsc, które znałam.”\n\n' +
       '„Na Wieży Radiowej mieszka Oko. Ona wie, jak mi pomóc.”',
-    choices: [{ text: 'Pomyśl, co dalej', to: 'dolina_intro' }],
+    choices: [
+      { text: '„Czego ode mnie chcesz?”', to: 'mira_want', req: { notFlag: 'mira_want' }, effect: { flag: 'mira_want' } },
+      { text: '„Skąd mam wiedzieć, że nie kłamiesz?”', to: 'mira_proof', req: { notFlag: 'mira_proof' }, effect: { flag: 'mira_proof' } },
+      { text: 'Pomyśl, co dalej', to: 'dolina_intro' },
+    ],
+  },
+
+  mira_want: {
+    chapter: 'Rozdział 2 · Głos',
+    text:
+      'Mira długo się zastanawia. Bęben pralki obok zwalnia i staje.\n\n' +
+      '„Chcę pamiętać, kim byłam. Chcę, żeby ktoś powiedział na głos moje prawdziwe imię. Na razie go nie znam.”\n\n' +
+      '„I chcę, żeby inni nie skończyli tak jak ja. Na Śluzie wciąż siedzą ludzie przed ekranami.”',
+    choices: [
+      { text: '„Zobaczymy, co da się zrobić.”', to: 'mira_who', effect: { trust: 1 } },
+      { text: '„Niczego nie obiecuję.”', to: 'mira_who' },
+    ],
+  },
+
+  mira_proof: {
+    chapter: 'Rozdział 2 · Głos',
+    text:
+      '„Nie wiesz” — przyznaje Mira. — „Ale sprawdź jedno. Bruno nalewa sobie wódki trzy razy, zanim powie prawdę. Zawsze tak robił, kiedy przychodził do mnie z chipami do zapisania.”\n\n' +
+      'Przypominasz sobie stukanie butelki o szklankę. Trzy razy.\n\n„Byłam tu wcześniej niż ty. Tylko w innym ciele.”',
+    choices: [{ text: 'Wróć do rozmowy', to: 'mira_who' }],
   },
 
   mira_cold: {
@@ -224,7 +292,7 @@ export const STORY = {
 
   // Dolina: miejsca na mapie
 
-  sluza: {
+  sluza_first: {
     chapter: 'Dolina · Szósta Śluza',
     text:
       'Szósta Śluza jest cicha. Za cicho. W oknach kamienic świecą ekrany, a przed nimi siedzą ludzie z uśmiechem na twarzach. Nieruchomi.\n\n' +
@@ -244,18 +312,32 @@ export const STORY = {
       { text: 'Zagłuszacz · 150 kr (drony widzą cię wolniej)', to: 'clinic', req: { credits: 150, notFlag: 'jammer' }, effect: { credits: -150, flag: 'jammer' } },
       { text: 'Pancerz podskórny · 350 kr (+1 maks. zdrowia)', to: 'clinic', req: { credits: 350, notFlag: 'armor' }, effect: { credits: -350, flag: 'armor', hp: 1 } },
       { text: 'Opatrunek · 80 kr (+1 zdrowie)', to: 'clinic', req: { credits: 80 }, effect: { credits: -80, hp: 1 } },
+      { text: 'Zapytaj, skąd ma stalowe palce', to: 'clinic_story', req: { notFlag: 'igla_story' }, effect: { flag: 'igla_story' } },
+      { text: '„Co pani myśli o Spokoju?”', to: 'ig_talk', req: { notFlag: 'ig_talk' }, effect: { flag: 'ig_talk' } },
+      { text: 'Zapytaj, czy ma dla ciebie zlecenie', to: 'ig_quest', req: { flag: 'igla_story', notFlags: ['ig_quest', 'igla_proof'] } },
+      { text: 'Oddaj Igle akta z tabletu kuriera', to: 'ig_done', req: { flag: 'ig_records', notFlag: 'igla_proof' } },
+      { text: 'Leki na serce dla pani Haliny · 60 kr', to: 'ig_meds', req: { flag: 'quest_meds', credits: 60, notFlag: 'meds' }, effect: { credits: -60, flag: 'meds' } },
       { text: 'Wyjdź na ulicę', to: '@map' },
     ],
   },
 
-  bruno_map: {
+  clinic_story: {
+    chapter: 'Dolina · Klinika Igła',
+    text:
+      'Igła rozkłada dłonie pod lampą. Dziesięć stalowych palców porusza się jak pajęcze nogi.\n\n' +
+      '„Byłam chirurgiem w Iglicy. Najlepszym na piętrze. Pewnego dnia odmówiłam operacji, która nie była leczeniem, tylko kradzieżą. Następnego dnia miałam wypadek przy maszynie.”\n\n' +
+      '„Halcyon zapłacił za nowe palce. Tylko że nigdy nie dał mi już pracy. Więc szyję tu, w Dolinie, za grosze.”\n\nPo chwili dodaje: „Dla ciebie zniżka. Każdy, kto ma Halcyon na ogonie, jest moim klientem.”',
+    choices: [{ text: 'Wróć do rozmowy', to: 'clinic', effect: { credits: 40 } }],
+  },
+
+  bruno_first: {
     chapter: 'Dolina · Bar Pod Pompą',
     text:
       'Bruno macha do ciebie zza zaparowanej szyby i wychodzi na zaplecze. Poci się, choć jest zimno.\n\n' +
       '„Halcyon wyznaczył nagrodę za ten chip. Każdy dron w Dolinie ma twoje zdjęcie.” Wciska ci do ręki kilka kredytów. „Na taksówkę. I nie wracaj tu przez tydzień.”',
     choices: [
-      { text: 'Weź kredyty i wyjdź', to: '@map', effect: { credits: 100 } },
-      { text: 'Zapytaj, czemu się poci', to: 'bruno_truth' },
+      { text: 'Weź kredyty i wyjdź', to: '@map', effect: { credits: 100, flag: 'bruno_seen' } },
+      { text: 'Zapytaj, czemu się poci', to: 'bruno_truth', effect: { flag: 'bruno_seen' } },
     ],
   },
 
@@ -288,8 +370,18 @@ export const STORY = {
       '„Ale nadajnik jest martwy. Spaliła się lampa mocy, a ostatnia w Dolinie leży w sejfie Szczurów, w zalanym metrze. Przynieś mi ją, a dostaniesz klucz do serwera Iglicy.”',
     choices: [
       { text: '„Zdobędę lampę.”', to: '@map', effect: { flag: 'oko_quest', trust: 1 } },
+      { text: '„Kim dla ciebie jest Mira?”', to: 'oko_why', req: { notFlag: 'oko_why' }, effect: { flag: 'oko_why' } },
       { text: '„To za duże ryzyko.”', to: '@map' },
     ],
+  },
+
+  oko_why: {
+    chapter: 'Dolina · Wieża Radiowa',
+    text:
+      'Oko odwraca się do monitorów. Przez chwilę słychać tylko wiatr w antenach.\n\n' +
+      '„Kimś, kogo straciłam. Więcej ci nie powiem, kurierze. Jeszcze nie.”\n\n' +
+      'Na jednym z ekranów widzisz zdjęcie: dwie dziewczyny na tej samej wieży, w różowym świetle świtu. Oko szybko je wyłącza.',
+    choices: [{ text: 'Wróć do rozmowy', to: 'oko_intro' }],
   },
 
   oko_wait: {
@@ -306,11 +398,6 @@ export const STORY = {
     choices: [{ text: 'Weź klucz', to: '@map', effect: { flag: 'key', trust: 1 } }],
   },
 
-  oko_done: {
-    chapter: 'Dolina · Wieża Radiowa',
-    text: '„Na co czekasz?” — Oko macha ręką w stronę stacji. — „Iglica sama się nie zhakuje.”',
-    choices: [{ text: 'Wróć na ulicę', to: '@map' }],
-  },
 
   oko_sister: {
     chapter: 'Dolina · Wieża Radiowa',
@@ -324,9 +411,6 @@ export const STORY = {
 
   // Zalane metro: Szczury
 
-  rats: {
-    route: [{ if: { flag: 'lamp' }, to: 'rats_done' }, { if: { flag: 'oko_quest' }, to: 'rats_lamp' }, { to: 'rats_intro' }],
-  },
 
   rats_intro: {
     chapter: 'Dolina · Zalane metro',
@@ -335,8 +419,18 @@ export const STORY = {
       '„Kurier z chipem” — mówi. — „Halcyon płaci za niego pięć tysięcy. Ja dam ci osiemset i nikt nie zrobi ci krzywdy.”',
     choices: [
       { text: 'Sprzedaj chip Kretowi (800 kr)', to: 'end_rats', effect: { credits: 800 } },
+      { text: '„Czemu tak tanio, skoro Halcyon daje pięć tysięcy?”', to: 'rats_why', req: { notFlag: 'rats_why' }, effect: { flag: 'rats_why' } },
       { text: 'Odmów i wyjdź', to: '@map' },
     ],
+  },
+
+  rats_why: {
+    chapter: 'Dolina · Zalane metro',
+    text:
+      'Kret śmieje się tak głośno, że szczur na jego ramieniu chowa się pod kołnierz.\n\n' +
+      '„Bo pięć tysięcy płacą temu, kto dojdzie do Iglicy żywy. Ty masz szansę jak jeden do dziesięciu. Ja mam ludzi, łodzie i tunele.”\n\n' +
+      '„Osiemset to cena za to, że dziś w nocy jeszcze pośpisz we własnym łóżku.”',
+    choices: [{ text: 'Wróć do rozmowy', to: 'rats_intro' }],
   },
 
   rats_lamp: {
@@ -385,11 +479,6 @@ export const STORY = {
     choices: [{ text: 'Uściśnij mu rękę', to: '@map', effect: { flag: 'rats_deal' } }],
   },
 
-  rats_done: {
-    chapter: 'Dolina · Zalane metro',
-    text: 'Kret kiwa ci głową z tronu.\n\n„Masz już, co chciałeś. Idź, zanim zmienię zdanie.”',
-    choices: [{ text: 'Wróć na ulicę', to: '@map' }],
-  },
 
   station: {
     chapter: 'Dolina · Stacja kolejki',
@@ -403,25 +492,8 @@ export const STORY = {
 
   // ROZDZIAŁ 3
 
-  train: {
-    route: [{ if: { heat: 50 }, to: 'train_agent' }, { if: { flag: 'sokol_known' }, to: 'train_warned' }, { to: 'train_calm' }],
-  },
 
-  train_calm: {
-    chapter: 'Rozdział 3 · Kolejka',
-    text:
-      'Kolejka sunie w górę. Za oknem Dolina zamienia się w świecącą plamę, a potem znika pod chmurami. Tutaj świeci słońce. Znasz je tylko z reklam.\n\n' +
-      'Mira odzywa się cicho:\n„Jeśli mnie oddasz, nie będę pamiętać, że kiedyś byłam kimś.”',
-    choices: [{ text: 'Wysiądź na poziomie 210', to: 'iglica_intro' }],
-  },
 
-  train_warned: {
-    chapter: 'Rozdział 3 · Kolejka',
-    text:
-      'Pamiętasz ostrzeżenie Bruna. Na Iglicy-Wschód, stację przed celem, wysiadasz i idziesz kładką serwisową nad przepaścią.\n\n' +
-      'Przez szybę następnego wagonu widzisz szary płaszcz i czerwony błysk wszczepu. Sokół czeka na peronie na kogoś, kto nie przyjedzie.',
-    choices: [{ text: 'Idź kładką na poziom 210', to: 'iglica_intro' }],
-  },
 
   train_agent: {
     chapter: 'Rozdział 3 · Kolejka',
@@ -480,12 +552,6 @@ export const STORY = {
     choices: [{ text: 'Wysiądź na poziomie 210', to: 'iglica_intro' }],
   },
 
-  agent_avoid: {
-    chapter: 'Rozdział 3 · Kolejka',
-    text:
-      'Drzwi otwierają się na Iglicy-Wschód. Wyskakujesz w ostatniej chwili, zanim Sokół zdąży zrobić krok. Przez szybę widzisz jego wściekłą twarz, gdy kolejka odjeżdża.\n\nBruno miał rację.',
-    choices: [{ text: 'Idź kładką na poziom 210', to: 'iglica_intro' }],
-  },
 
   // ROZDZIAŁ 4
 
@@ -498,7 +564,7 @@ export const STORY = {
     text:
       'Poziom 210. Biel, szkło i zapach sztucznych kwiatów. Korytarze patrolują drony ochrony, a każdy z nich ma w pamięci twoją twarz.\n\n' +
       'Laboratorium doktor Wren jest na północnym końcu piętra. Serwerownia Halcyonu jest w samym środku, za blokiem B. We wschodnim skrzydle mieści się archiwum.',
-    choices: [{ text: 'Wejdź na korytarz', to: 'iglica_map' }],
+    choices: [{ text: 'Wejdź na korytarz', to: 'iglica_map', effect: { flag: 'in_iglica' } }],
   },
 
   iglica_blackout: {
@@ -507,7 +573,7 @@ export const STORY = {
       'Poziom 210. Biel, szkło i zapach sztucznych kwiatów. Robisz trzy kroki i nagle wszystkie światła gasną.\n\n' +
       'W uchu słyszysz chrapliwy śmiech Kreta: „Szczury dotrzymują słowa. Masz czas, zanim włączą zapasowe zasilanie.”\n\n' +
       'Część dronów ochrony opada bez prądu na podłogę. Systemy, które cię szukały, tracą trop.',
-    choices: [{ text: 'Wejdź na ciemny korytarz', to: 'iglica_map', effect: { heat: -20 } }],
+    choices: [{ text: 'Wejdź na ciemny korytarz', to: 'iglica_map', effect: { heat: -20, flag: 'in_iglica' } }],
   },
 
   iglica_map: { map: 'iglica' },
@@ -527,12 +593,25 @@ export const STORY = {
       'Doktor Wren czeka w laboratorium. Uśmiecha się jak ktoś, kto nigdy nie stał w deszczu.\n\n' +
       '„Chip, proszę. Przelew jest gotowy.”\n\nChip w twojej dłoni jest gorący.',
     choices: [
-      { text: 'Oddaj chip Wren (2000 kr)', to: 'end_delivered', effect: { credits: 2000 } },
+      { text: 'Oddaj chip Wren (2000 kr)', to: 'ep_deliv_1', effect: { credits: 2000 } },
+      { text: '„Wiesz, kim ona była?”', to: 'wren_talk', req: { notFlag: 'wren_talk' }, effect: { flag: 'wren_talk' } },
+      { text: 'Zapytaj o zdjęcie na jej biurku', to: 'wren_husband', req: { notFlag: 'wren_husband' }, effect: { flag: 'wren_husband' } },
+      { text: '„Pomóż mi to naprawić.”', to: 'wren_soft_card', req: { flag: 'wren_soft', notFlag: 'wren_card' } },
+      { text: 'Zaczaj się w laboratorium do nocy', to: 'lab_night', req: { flag: 'prezes_rumor', notFlag: 'prezes_proof' } },
       { text: 'Pokaż Wren listę 4312 nazwisk', to: 'wren_doubt', req: { flag: 'archive', notFlag: 'wren_card' } },
-      { text: 'Uwolnij Mirę do sieci miasta', to: 'end_ghost', req: { trust: 3 } },
-      { text: 'Zmiażdż chip w dłoni', to: 'end_ash' },
+      { text: 'Uwolnij Mirę do sieci miasta', to: 'ep_ghost_1', req: { trust: 3 } },
+      { text: 'Zmiażdż chip w dłoni', to: 'ep_ash_1' },
       { text: 'Wróć na korytarz', to: '@map' },
     ],
+  },
+
+  wren_talk: {
+    chapter: 'Iglica · Laboratorium',
+    text:
+      'Wren unosi brwi, jakby zadano jej pytanie z innego przedmiotu.\n\n' +
+      '„Kim była? To zbiór danych. Wspomnienia czterech tysięcy dawców, oczyszczone i złożone w jedną, spójną osobowość. Najlepsza asystentka, jaką kiedykolwiek zbudowano.”\n\n' +
+      '„Dawcy podpisali zgody. Wszystko jest legalne.” Uśmiecha się szerzej. „A ty jesteś kurierem. Kurierzy nie zadają pytań.”',
+    choices: [{ text: 'Wróć do rozmowy', to: 'lobby' }],
   },
 
   wren_doubt: {
@@ -584,56 +663,18 @@ export const STORY = {
         text: 'Spróbuj jeszcze raz',
         game: { type: 'hack', level: 3, win: { to: 'broadcast' }, lose: { to: 'end_caught' } },
       },
-      { text: 'Uwolnij Mirę, póki jest czas', to: 'end_ghost', req: { trust: 2 } },
+      { text: 'Uwolnij Mirę, póki jest czas', to: 'ep_ghost_1', req: { trust: 2 } },
       { text: 'Uciekaj na korytarz', to: '@map' },
     ],
   },
 
   // ROZDZIAŁ 5
 
-  broadcast: {
-    chapter: 'Rozdział 5 · Sygnał',
-    text:
-      'Pasek postępu dochodzi do końca. Gdzieś daleko w dole Wieża Radiowa budzi się z szumem.\n\n' +
-      'Całe piętro wyje alarmem. Jedyna droga na dół to rampa awaryjna dla motorów kurierskich, spiralą przez sto pięter.\n\n' +
-      'Ale przy rampie ktoś już czeka. Szary płaszcz, czerwone oko.\n\nSokół: „Daleko nie uciekniesz, kurierze.”',
-    choices: [
-      {
-        text: 'Walcz o rampę',
-        game: { type: 'duel', level: 3, win: { to: 'ramp' }, lose: { to: 'ramp_hurt', effect: { hp: -1 } } },
-      },
-    ],
-  },
 
-  ramp: {
-    chapter: 'Rozdział 5 · Sygnał',
-    text:
-      'Sokół pada na beton i już nie wstaje. Wskakujesz na najbliższy motor kurierski i odpalasz silnik.\n\n' +
-      'Mira: „Nadajnik potrzebuje jeszcze kilku minut. Jeśli cię złapią, zanim skończy, wyłączą go.”',
-    choices: [
-      {
-        text: 'Zjeżdżaj rampą',
-        game: { type: 'chase', level: 3, win: { to: 'finale' }, lose: { to: 'end_martyr' } },
-      },
-    ],
-  },
 
-  ramp_hurt: {
-    chapter: 'Rozdział 5 · Sygnał',
-    text:
-      'Paralizator Sokoła przypala ci bok. Krzyczysz, ale udaje ci się odepchnąć go na barierkę. Wskakujesz na motor, zanim zdąży wstać.\n\n' +
-      'Mira: „Nadajnik potrzebuje jeszcze kilku minut. Wytrzymaj.”',
-    choices: [
-      {
-        text: 'Zjeżdżaj rampą',
-        game: { type: 'chase', level: 3, win: { to: 'finale' }, lose: { to: 'end_martyr' } },
-      },
-    ],
-  },
 
-  finale: {
-    route: [{ if: { flag: 'sisters' }, to: 'end_name' }, { to: 'end_signal' }],
-  },
+
+
 
   // Zakończenia
 
@@ -668,6 +709,28 @@ export const STORY = {
         'Motor uderza w barierkę na poziomie 140. Ochrona otacza cię, zanim zdążysz wstać.\n\n' +
         'Ale nadajnik zdążył. Przez dwanaście minut cała Dolina oglądała wspomnienia ze Śluzy, zanim Halcyon odciął Wieżę.\n\n' +
         'Dwanaście minut wystarczyło. W celi słyszysz przez ścianę, jak tłum na dole skanduje imię Miry.',
+    },
+  },
+
+  end_deal: {
+    ending: {
+      key: 'deal',
+      title: 'Umowa',
+      text:
+        'Spokój zostaje wyłączony po cichu, bez procesu, bez nagłówków i bez winnych. Ludzie na Śluzie budzą się powoli, jeden po drugim, i nikt nie wie, komu za to dziękować.\n\n' +
+        'Wolański umiera pół roku później w szpitalu na poziomie 300. Jego nekrolog zajmuje dwie strony. O Spokoju nie ma w nim ani słowa.\n\n' +
+        'Mira mieszka w twoim komunikatorze i czasem pyta, czy dobrze zrobiliście. Za każdym razem odpowiadasz inaczej.',
+    },
+  },
+
+  end_crown: {
+    ending: {
+      key: 'crown',
+      title: 'Korona Iglicy',
+      text:
+        'Halcyon ma nowego przewodniczącego rady nadzorczej. Kogoś, kto zna Dolinę od podszewki i wie, ile kosztuje każdy człowiek na dole.\n\n' +
+        'Akcje rosną. Wieże rosną. Ekrany na Śluzie świecą na niebiesko.\n\n' +
+        'Wolański umiera spokojnie, wiedząc, że jego dzieło jest w dobrych rękach. W takich samych jak jego.',
     },
   },
 
@@ -732,4 +795,32 @@ export const STORY = {
         'Ostatnie, co słyszysz, to głos Miry:\n„Przepraszam. To przeze mnie.”',
     },
   },
+};
+
+export const STORY = {
+  ...CORE,
+  ...prolog,
+  ...miraTalk,
+  ...sluza,
+  ...bruno,
+  ...igla,
+  ...szczury,
+  ...oko,
+  ...pchla,
+  ...bazar,
+  ...posterunek,
+  ...ul,
+  ...kolejka,
+  ...iglica,
+  ...finale,
+  ...epilogi,
+  ...port,
+  ...rodziny,
+  ...bazarExtra,
+  ...ulJobs,
+  ...miraMore,
+  ...iglicaMore,
+  ...dolinaMore,
+  ...epilogiMore,
+  ...dodatki,
 };
