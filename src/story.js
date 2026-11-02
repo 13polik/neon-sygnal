@@ -32,6 +32,10 @@ import iglicaMore from './arcs/iglica_more.js';
 import dolinaMore from './arcs/dolina_more.js';
 import epilogiMore from './arcs/epilogi_more.js';
 import dodatki from './arcs/dodatki.js';
+import kronika from './arcs/kronika.js';
+import iglicaExtra from './arcs/iglica_extra.js';
+import ostatnie from './arcs/ostatnie.js';
+import domkniecie from './arcs/domkniecie.js';
 
 export const START_STATS = { credits: 120, heat: 10, hp: 3, trust: 0 };
 
@@ -313,6 +317,7 @@ const CORE = {
       { text: 'Pancerz podskórny · 350 kr (+1 maks. zdrowia)', to: 'clinic', req: { credits: 350, notFlag: 'armor' }, effect: { credits: -350, flag: 'armor', hp: 1 } },
       { text: 'Opatrunek · 80 kr (+1 zdrowie)', to: 'clinic', req: { credits: 80 }, effect: { credits: -80, hp: 1 } },
       { text: 'Zapytaj, skąd ma stalowe palce', to: 'clinic_story', req: { notFlag: 'igla_story' }, effect: { flag: 'igla_story' } },
+      { text: 'Przegląd wszczepów i opatrunki · 50 kr (pełne zdrowie)', to: 'ig_checkup', req: { credits: 50 }, effect: { credits: -50, hp: 4 } },
       { text: '„Co pani myśli o Spokoju?”', to: 'ig_talk', req: { notFlag: 'ig_talk' }, effect: { flag: 'ig_talk' } },
       { text: 'Zapytaj, czy ma dla ciebie zlecenie', to: 'ig_quest', req: { flag: 'igla_story', notFlags: ['ig_quest', 'igla_proof'] } },
       { text: 'Oddaj Igle akta z tabletu kuriera', to: 'ig_done', req: { flag: 'ig_records', notFlag: 'igla_proof' } },
@@ -584,7 +589,10 @@ const CORE = {
       'Archiwum Spokoju. Szafy pełne papierowych teczek, bo Halcyon nie ufa nawet własnym serwerom. Na każdej imię, adres i data podpisania umowy. 4312 osób.\n\n' +
       'Teczki z Szóstej Śluzy zajmują całą szafę. Jedna jest grubsza od innych: Hanna Wójcik, 19 lat. W rubryce „przeznaczenie danych” ktoś wpisał jedno słowo: MIRA.\n\n' +
       'Chip w twojej kieszeni robi się gorący.',
-    choices: [{ text: 'Zabierz listę nazwisk', to: '@map', effect: { flag: 'archive', trust: 1 } }],
+    choices: [
+      { text: 'Zabierz listę nazwisk', to: '@map', effect: { flag: 'archive', trust: 1 } },
+      { text: 'Zabierz listę i przejrzyj inne teczki', to: 'arch_more', effect: { flag: 'archive', trust: 1 } },
+    ],
   },
 
   lobby: {
@@ -823,4 +831,8 @@ export const STORY = {
   ...dolinaMore,
   ...epilogiMore,
   ...dodatki,
+  ...kronika,
+  ...iglicaExtra,
+  ...ostatnie,
+  ...domkniecie,
 };

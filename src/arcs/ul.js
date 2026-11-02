@@ -17,6 +17,7 @@ export default {
       go('Prześpij się (zdrowie do pełna, ślad −10%)', 'ul_rest', { req: { notFlag: 'ul_rested' }, effect: { hp: 4, heat: -10, flag: 'ul_rested' } }),
       go('Przejrzyj tablicę zleceń', 'ul_board'),
       go('Zapukaj do pani Zofii z kapsuły obok', 'ul_zofia', { req: { notFlag: 'job_cat' } }),
+      go('Odwiedź panią Zofię i Pimpka', 'ul_zofia2', { req: { flag: 'job_cat', notFlag: 'zofia2' } }),
       go('Zajdź na trzydzieste piętro', 'ul_wojtek', { req: { notFlag: 'premium_rumor' } }),
       street,
     ]

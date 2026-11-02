@@ -43,14 +43,14 @@ export default {
   ),
 
   // Wpinane w łańcuch Neon Sygnału
-  ep_signal_2b: route({ if: { flag: 'nowak_ally' }, to: 'ep_signal_nowak' }, { to: 'ep_signal_3' }),
+  ep_signal_2b: route({ if: { flag: 'nowak_ally' }, to: 'ep_signal_nowak' }, { to: 'kk_start' }),
 
   ep_signal_nowak: sc(
     E,
     `Oficer Nowak nagrywa zeznanie na tle swojego Posterunku. Jedenaście lat przy szlabanie, setki vanów jadących na Śluzę.
 
     Nagranie obiega Dolinę w godzinę. Następnego dnia Nowak zdejmuje biały płaszcz, wiesza go na szlabanie i odchodzi. Szlaban zostaje podniesiony na zawsze.`,
-    [next('ep_signal_3')]
+    [next('kk_start')]
   ),
 
   // Wpinane w łańcuch Ostatniej audycji

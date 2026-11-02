@@ -80,7 +80,7 @@ export default {
     [next('ep_name_7')]
   ),
 
-  ep_name_7: route({ if: { flag: 'photo' }, to: 'ep_name_halina' }, { to: 'ep_name_8' }),
+  ep_name_7: route({ if: { flag: 'photo' }, to: 'ep_name_halina' }, { to: 'kk_start' }),
 
   ep_name_halina: sc(
     E,
@@ -91,7 +91,7 @@ export default {
     „Babciu” — mówi głośnik głosem Hani. — „Pamiętasz piosenkę o łódce? Fałszowałaś w trzecim wersie. Ja też.”
 
     Pani Halina siada, kładzie dłoń na głośniku i śpiewa. Fałszuje w trzecim wersie.`,
-    [next('ep_name_8')]
+    [next('kk_start')]
   ),
 
   ep_name_8: sc(
@@ -258,7 +258,7 @@ export default {
     Ale Halcyon nie dostał Miry. Nie zrobił z niej asystentki. Czasem myślisz, że to jedyne zwycięstwo, jakie da się wygrać w Dolinie: nie dać im wszystkiego.
 
     Okruchy krzemu nosisz w medalionie na szyi.`,
-    [go('Dalej', 'end_ash')]
+    [go('Dalej', 'ep_ash_2b')]
   ),
 
   // Umowa
@@ -296,7 +296,7 @@ export default {
     `Gabinet na szczycie Iglicy ma najpiękniejszy widok na świecie. Chmury jak ocean, słońce co rano, cisza.
 
     Masz nowe imię, nowy garnitur i nowe zdjęcie na stronie internetowej Halcyonu. Ludzie w Iglicy kłaniają ci się na korytarzach. Nikt nie wie, skąd przychodzisz. Nikt nie pyta.`,
-    [next('ep_crown_2')]
+    [next('ep_crown_1b')]
   ),
 
   ep_crown_2: sc(

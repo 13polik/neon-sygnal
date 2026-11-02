@@ -7,6 +7,7 @@ const street = go('Wróć na ulicę', '@map');
 
 export default {
   rats: route(
+    { if: { flag: 'betrayed_rats' }, to: 'kr_betrayed' },
     { if: { flag: 'lamp' }, to: 'kr_hub' },
     { if: { flag: 'oko_quest' }, to: 'rats_lamp' },
     { to: 'rats_intro' }
@@ -24,6 +25,7 @@ export default {
       go('„Przekażę wiadomość Gawronowi.”', 'kr_msg', { req: { flag: 'kr_kruki', notFlags: ['kr_msg', 'kruki_peace', 'kruki_war'] }, effect: { flag: 'kr_msg' } }),
       go('Opowiedz, jak poszło z Krukami', 'kr_result', { req: { any: [{ flag: 'kruki_peace' }, { flag: 'kruki_war' }], notFlag: 'kr_result' }, effect: { flag: 'kr_result' } }),
       go('Popatrz na bójkę na peronie', 'kr_fight', { req: { notFlag: 'kr_fight' } }),
+      go('Przywitaj się z Anią', 'kr_ania', { req: { flag: 'kret_friend', notFlag: 'kr_ania' } }),
       go('Zobacz spotkanie Kreta z Gawronem', 'kr_meeting', { req: { flag: 'gangs_united', notFlag: 'kr_meeting' } }),
       go('Pogadaj z Małym, przewoźnikiem', 'kr_maly', { req: { notFlag: 'kr_maly' }, effect: { flag: 'kr_maly' } }),
       go('Popłyń łodzią Szczurów do Portu Południowego', 'port_1', { req: { notFlag: 'port_done' } }),

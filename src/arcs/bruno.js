@@ -19,6 +19,7 @@ export default {
       go('Daj Brunie 300 kr na spłatę raty', 'br_paid', { req: { flag: 'br_help', credits: 300, notFlag: 'br_paid' }, effect: { credits: -300, flag: 'br_paid' } }),
       go('„Pamiętasz Hanię? Dziewczynę, która programowała ci chipy?”', 'br_past', { req: { flag: 'mem3', notFlag: 'br_past' }, effect: { flag: 'br_past' } }),
       go('Sprzedaj mu zegarek Teodora', 'br_watch', { req: { flag: 'watch', notFlag: 'kind_teodor' }, effect: { credits: 60, flag: 'kind_teodor' } }),
+      go('Poproś o zdjęcie Hani', 'br_photo', { req: { flag: 'br_past', notFlag: 'br_photo' } }),
       go('„Skąd te ślady sadzy na suficie?”', 'br_fire', { req: { flag: 'br_debt', notFlag: 'br_fire' }, effect: { flag: 'br_fire' } }),
       go('Zamów coś do jedzenia (15 kr)', 'br_food', { req: { credits: 15 }, effect: { credits: -15, hp: 1 } }),
       street,

@@ -13,6 +13,7 @@ export default {
     Obok kontenera stoi drugi, mniejszy, z napisem RZECZY ZATRZYMANE. Kłódka wygląda na tanią.`,
     [
       go('Porozmawiaj z oficerem Nowakiem', 'ps_talk', { req: { notFlag: 'ps_talk' }, effect: { flag: 'ps_talk' } }),
+      go('Schowaj się: pod Posterunek podjeżdża czarny samochód', 'ps_sokol', { req: { heat: 40, notFlag: 'sokol_seen' } }),
       go('Zapytaj Nowaka, dlaczego tu trafił', 'ps_nowak', { req: { flag: 'ps_talk', notFlag: 'nowak_ally' } }),
       go('Pokaż fałszywą licencję od Sroki', 'ps_fakeid', { req: { flag: 'fake_id', notFlag: 'ps_fakeid' }, effect: { flag: 'ps_fakeid', heat: -25 } }),
       go('Zaproponuj Nowakowi 150 kr za „błąd w systemie”', 'ps_bribe', { req: { credits: 150, notFlag: 'ps_bribe' }, effect: { credits: -150, heat: -30, flag: 'ps_bribe' } }),

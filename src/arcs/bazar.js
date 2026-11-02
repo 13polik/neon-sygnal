@@ -27,6 +27,7 @@ export default {
       go('Budka pana Lina (makaron)', 'bz_lin'),
       go('Klatka (walki na pieniądze)', 'bz_cage', { req: { notFlag: 'cage_champ' } }),
       go('Kruczy róg bazaru', 'bz_kruki', { req: { flag: 'kruki_met' } }),
+      go('Spalony kruczy róg', 'bz_war_after', { req: { flag: 'kruki_war', notFlag: 'war_seen' } }),
       go('Warsztat Złotej Rączki', 'bz_mech'),
       go('Kaznodzieja na skrzynce', 'bz_preach'),
       go('Budka tatuażysty Igora', 'bz_tattoo'),
@@ -46,6 +47,7 @@ export default {
       go('Kup cewkę antenową dla Oka (150 kr)', 'bz_coil', { req: { flag: 'amp_quest', credits: 150, notFlag: 'amp_coil' }, effect: { credits: -150, flag: 'amp_coil' } }),
       go('Wymień zegarek Teodora na cewkę', 'bz_coil', { req: { flags: ['amp_quest', 'watch'], notFlags: ['amp_coil', 'kind_teodor'] }, effect: { flag: ['amp_coil', 'kind_teodor'] } }),
       go('Kup fałszywą licencję kuriera (150 kr)', 'bz_id', { req: { credits: 150, notFlag: 'fake_id' }, effect: { credits: -150, flag: 'fake_id' } }),
+      go('„Skąd się tu wzięłaś, Sroka?”', 'bz_sroka_story', { req: { notFlag: 'sroka_story' } }),
       go('Sprzedaj zegarek Teodora (80 kr)', 'bz_watch', { req: { flag: 'watch', notFlag: 'kind_teodor' }, effect: { credits: 80, flag: 'kind_teodor' } }),
       hub,
     ]
@@ -145,6 +147,7 @@ export default {
     [
       go('Zjedz makaron (15 kr, +1 zdrowie)', 'bz_lin_eat', { req: { credits: 15 }, effect: { credits: -15, hp: 1 } }),
       go('Poproś o opowieść', 'bz_lin_story', { req: { notFlag: 'lin_story' }, effect: { flag: 'lin_story' } }),
+      go('„Co to za lampiony nad budką?”', 'bz_lin_anniv', { req: { notFlag: 'lin_story' } }),
       hub,
     ]
   ),

@@ -17,6 +17,8 @@ export default {
     [
       go('Podsłuchaj rozmowę przy stoliku obok', 'ic_gossip', { req: { notFlag: 'ic_gossip' }, effect: { flag: 'ic_gossip' } }),
       go('Porozmawiaj z kucharką', 'ic_ewa', { req: { notFlag: 'ic_ewa' }, effect: { flag: 'ic_ewa' } }),
+      go('Zapytaj Ewę o siostrę', 'ic_ewa_sister', { req: { flag: 'ic_ewa', notFlag: 'ewa_sister' }, effect: { flag: 'ewa_sister' } }),
+      go('Chłopak w swetrze przy stoliku w kącie', 'kamil', { req: { notFlag: 'kamil_keys' } }),
       go('Zakradnij się do szatni ochrony', 'ic_lockers', { req: { notFlag: 'uniform' } }),
       go('Zjedz obiad (20 kr, +1 zdrowie)', 'ic_eat', { req: { credits: 20 }, effect: { credits: -20, hp: 1 } }),
       corridor,
@@ -135,6 +137,7 @@ export default {
     Część dronów na piętrze wraca do stacji dokujących. Nie mają już oczu, żeby patrzeć.`,
     [
       go('Przejrzyj akta pracowników', 'ic_files', { req: { notFlag: 'sokol_past' } }),
+      go('Ktoś wchodzi do biura', 'ic_marczak', { req: { flag: 'uniform', notFlag: 'marczak_ally' } }),
       corridor,
     ]
   ),
