@@ -1,0 +1,49 @@
+# Buduje niepodpisany plik .ipa na Macu w chmurze.
+# Podpisanie i instalacja odbywa się później na Windowsie przez iloader (darmowe Apple ID).
+name: Build iOS .ipa
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  ipa:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate native iOS project
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Build app (unsigned)
+        run: |
+          WS=$(ls -d ios/*.xcworkspace | head -1)
+          SCHEME=$(basename "$WS" .xcworkspace)
+          echo "Workspace: $WS, scheme: $SCHEME"
+          xcodebuild -workspace "$WS" -scheme "$SCHEME" \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            | tail -n 200
+          test ${PIPESTATUS[0]} -eq 0
+
+      - name: Package .ipa
+        run: |
+          mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/*.app Payload/
+          zip -qry NeonSygnal.ipa Payload
+          ls -lh NeonSygnal.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NeonSygnal-ipa
+          path: NeonSygnal.ipa
