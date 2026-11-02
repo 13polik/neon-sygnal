@@ -1,19 +1,19 @@
 // Mapy do eksploracji. Siatka: '#' budynek/ściana, '.' ulica, '$' kredyty,
-// 'P' start gracza, wielkie litery to miejsca (pois) prowadzące do scen fabuły.
-// Drony patrolują w linii prostej między punktami a i b (kolumna, wiersz).
+// 'P' start gracza, 'M' fragment pamięci Miry, pozostałe wielkie litery to miejsca (pois)
+// prowadzące do scen fabuły. Drony patrolują w linii prostej między punktami a i b
+// (kolumna, wiersz); dron z 'unless' znika, gdy gracz ma daną flagę.
 
 export const TILE = 40;
 
 export const MAPS = {
   dolina: {
     title: 'Dolina',
-    objective: 'Dotrzyj do stacji kolejki na południu. Omijaj drony.',
     cash: 25,
     grid: [
       '##################',
       '#.P..#####.....W.#',
       '#....#####.......#',
-      '#....#####..###..#',
+      '#....#####..###.M#',
       '#..........###..$#',
       '###..####..###...#',
       '###..####........#',
@@ -23,7 +23,7 @@ export const MAPS = {
       '#..$.###..####...#',
       '#....###.........#',
       '####.......###..##',
-      '####..##...###..##',
+      '####..##.M.###..##',
       '#.....##.$......K#',
       '#..#######..###..#',
       '#..#######..###..#',
@@ -32,9 +32,9 @@ export const MAPS = {
       '###....##..####..#',
       '###.$..##..####..#',
       '#..........####.$#',
-      '#..####..........#',
+      '#..####.........M#',
       '#..####..####..B.#',
-      '#........####....#',
+      '#Z.......####....#',
       '#................#',
       '#....T.....$.....#',
       '##################',
@@ -43,13 +43,13 @@ export const MAPS = {
       W: {
         label: 'Wieża Radiowa',
         to: 'oko',
-        once: true,
         reqAny: [{ trust: 1 }, { flag: 'truth' }],
         locked: 'Oko nie otwiera obcym. Może Mira albo ludzie ze Śluzy powiedzą ci, jak ją przekonać.',
       },
       S: { label: 'Szósta Śluza', to: 'sluza', once: true },
       K: { label: 'Klinika Igła', to: 'clinic' },
       B: { label: 'Bar Pod Pompą', to: 'bruno_map', once: true },
+      Z: { label: 'Zalane metro', to: 'rats' },
       T: { label: 'Stacja kolejki', to: 'station' },
     },
     drones: [
@@ -71,7 +71,6 @@ export const MAPS = {
 
   iglica: {
     title: 'Iglica Halcyon · poziom 210',
-    objective: 'Laboratorium Wren jest na północy. Serwerownia w środku piętra.',
     cash: 40,
     grid: [
       '##############',
@@ -79,7 +78,7 @@ export const MAPS = {
       '#........#.$.#',
       '#####.####...#',
       '#.......##.###',
-      '#.$..#..#....#',
+      '#.$..#..#...H#',
       '#....#.......#',
       '####.####.####',
       '#............#',
@@ -100,11 +99,12 @@ export const MAPS = {
     pois: {
       L: { label: 'Laboratorium Wren', to: 'lobby' },
       R: { label: 'Serwerownia', to: 'server' },
+      H: { label: 'Archiwum', to: 'archive', once: true },
     },
     drones: [
-      { a: [1, 2], b: [8, 2], speed: 50, r: 85 },
+      { a: [1, 2], b: [8, 2], speed: 50, r: 85, unless: 'rats_deal' },
       { a: [1, 8], b: [12, 8], speed: 70, r: 85 },
-      { a: [1, 14], b: [12, 14], speed: 65, r: 85 },
+      { a: [1, 14], b: [12, 14], speed: 65, r: 85, unless: 'rats_deal' },
       { a: [3, 18], b: [12, 18], speed: 55, r: 80 },
     ],
     signs: [

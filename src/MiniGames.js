@@ -2,6 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { C, F, buzz } from './theme';
 
+// Reakcja w chwili dotknięcia ekranu, bez opóźnienia, jakie ma Pressable
+const touchStart = (fn) => ({
+  onStartShouldSetResponder: () => true,
+  onResponderGrant: (e) => fn(e),
+});
+
 const CODES = ['1C', '55', '7A', 'BD', 'E9', 'FF', '0D', 'A3', '4B'];
 
 const shuffle = (a) => {
@@ -189,7 +195,7 @@ export function TimingGame({ level, mods = [], onDone }) {
       winText="UDAŁO SIĘ"
       loseText="NIE TYM RAZEM"
     >
-      <Pressable style={s.tapArea} onPress={tap}>
+      <View style={s.tapArea} {...touchStart(tap)}>
         <Text style={s.counter}>
           TRAFIENIA {hits}/{need}   ·   PUDŁA {misses}/1
         </Text>
@@ -198,7 +204,7 @@ export function TimingGame({ level, mods = [], onDone }) {
           <View style={[s.marker, { left: `${pos.current * 100}%` }]} />
         </View>
         <Text style={s.hint}>STUKNIJ GDZIEKOLWIEK</Text>
-      </Pressable>
+      </View>
     </Frame>
   );
 }
@@ -293,10 +299,10 @@ export function ChaseGame({ level, mods = [], onDone }) {
           <View style={[s.timeFill, { width: `${Math.min(1, g.time / dur) * 100}%`, backgroundColor: C.yellow }]} />
         </View>
         <Text style={s.counter}>
-          UDERZENIA {g.hits}/{maxHits - 1}
+          UDERZENIA {Math.min(g.hits, maxHits - 1)}/{maxHits - 1}
         </Text>
       </View>
-      <Pressable style={s.road} onPressIn={steer} onLayout={(e) => setSize(e.nativeEvent.layout)}>
+      <View style={s.road} {...touchStart(steer)} onLayout={(e) => setSize(e.nativeEvent.layout)}>
         {[1, 2].map((k) =>
           dashes.map((y) => <View key={`${k}-${y}`} style={[s.dash, { left: laneW * k - 2, top: y }]} />)
         )}
@@ -314,7 +320,119 @@ export function ChaseGame({ level, mods = [], onDone }) {
             <View style={s.bikeLight} />
           </View>
         ) : null}
-      </Pressable>
+      </View>
+    </Frame>
+  );
+}
+
+export function DuelGame({ level, mods = [], onDone }) {
+  const need = level + 2;
+  const maxHits = mods.includes('armor') ? 3 : 2;
+  const warn = (1000 - level * 150) * (mods.includes('reflex') ? 1.25 : 1);
+  const feint = level >= 2 ? 0.25 : 0;
+  const [phase, setPhase] = useState('intro');
+  const [won, setWon] = useState(false);
+  const [view, setView] = useState({ state: 'idle', side: null, blocks: 0, hits: 0 });
+  const g = useRef({ side: null, armed: false, blocks: 0, hits: 0, timers: [] });
+
+  const later = (ms, fn) => g.current.timers.push(setTimeout(fn, ms));
+  useEffect(() => () => g.current.timers.forEach(clearTimeout), []);
+  const show = (state) => setView({ state, side: g.current.side, blocks: g.current.blocks, hits: g.current.hits });
+
+  const attack = () => {
+    g.current.side = null;
+    g.current.armed = false;
+    show('idle');
+    later(600 + Math.random() * 700, () => {
+      const first = Math.random() < 0.5 ? 'L' : 'R';
+      g.current.side = first;
+      g.current.armed = true;
+      show('warn');
+      if (Math.random() < feint) {
+        later(warn * 0.45, () => {
+          if (!g.current.armed) return;
+          g.current.side = first === 'L' ? 'R' : 'L';
+          buzz();
+          show('warn');
+        });
+        later(warn * 1.3, () => g.current.armed && resolve(null));
+      } else {
+        later(warn, () => g.current.armed && resolve(null));
+      }
+    });
+  };
+
+  const resolve = (tap) => {
+    g.current.armed = false;
+    if (tap === g.current.side) {
+      g.current.blocks++;
+      buzz();
+      show('block');
+      if (g.current.blocks >= need) {
+        buzz('ok');
+        later(500, () => {
+          setWon(true);
+          setPhase('done');
+        });
+      } else later(500, attack);
+    } else {
+      g.current.hits++;
+      buzz('bad');
+      show('hit');
+      if (g.current.hits >= maxHits) {
+        later(600, () => {
+          setWon(false);
+          setPhase('done');
+        });
+      } else later(700, attack);
+    }
+  };
+
+  const tap = (side) => {
+    if (g.current.armed) resolve(side);
+  };
+
+  const label = {
+    idle: ['CZEKAJ…', C.dim],
+    warn: [view.side === 'L' ? '◀ CIOS Z LEWEJ' : 'CIOS Z PRAWEJ ▶', C.red],
+    block: ['BLOK!', C.green],
+    hit: ['TRAFIONY', C.red],
+  }[view.state];
+
+  return (
+    <Frame
+      title="POJEDYNEK"
+      color={C.red}
+      rules={`Sokół atakuje z lewej albo z prawej. Stuknij stronę, z której leci cios, zanim trafi.\nZablokuj ${need} ${need >= 5 ? 'ciosów' : 'ciosy'}. Możesz oberwać ${maxHits - 1 === 1 ? 'raz' : `${maxHits - 1} razy`}. Uważaj na zmyłki.`}
+      phase={phase}
+      won={won}
+      onStart={() => {
+        setPhase('play');
+        attack();
+      }}
+      onDone={onDone}
+      winText="SOKÓŁ LEŻY"
+      loseText="POWALONY"
+    >
+      <Text style={s.counter}>
+        BLOKI {view.blocks}/{need}   ·   TRAFIENIA {Math.min(view.hits, maxHits - 1)}/{maxHits - 1}
+      </Text>
+      <View style={s.foe}>
+        <View style={[s.foeBody, view.state === 'hit' && { borderColor: C.red }, view.state === 'block' && { borderColor: C.green }]}>
+          <View style={s.foeEye} />
+        </View>
+        <Text style={[s.duelCall, { color: label[1] }]}>{label[0]}</Text>
+      </View>
+      <View style={s.duelRow}>
+        {['L', 'R'].map((side) => {
+          const hot = view.state === 'warn' && view.side === side;
+          return (
+            <View key={side} {...touchStart(() => tap(side))} style={[s.duelSide, hot && s.duelHot]}>
+              <Text style={[s.duelSideText, hot && { color: C.red }]}>{side === 'L' ? 'LEWA' : 'PRAWA'}</Text>
+            </View>
+          );
+        })}
+      </View>
     </Frame>
   );
 }
@@ -351,4 +469,12 @@ const s = StyleSheet.create({
   barrier: { position: 'absolute', height: 20, backgroundColor: '#3a3010', borderWidth: 2, borderColor: C.yellow },
   bike: { position: 'absolute', width: 28, height: 50, backgroundColor: C.cyan, borderRadius: 8, alignItems: 'center' },
   bikeLight: { width: 14, height: 6, backgroundColor: C.yellow, marginTop: 3, borderRadius: 3 },
+  foe: { alignItems: 'center', gap: 16 },
+  foeBody: { width: 70, height: 70, borderWidth: 3, borderColor: C.dim, backgroundColor: C.panel, transform: [{ rotate: '45deg' }], alignItems: 'center', justifyContent: 'center' },
+  foeEye: { width: 14, height: 14, borderRadius: 7, backgroundColor: C.red },
+  duelCall: { fontFamily: F.bold, fontSize: 22, letterSpacing: 3 },
+  duelRow: { flexDirection: 'row', gap: 10, height: 220 },
+  duelSide: { flex: 1, borderWidth: 2, borderColor: C.line, backgroundColor: C.panel, alignItems: 'center', justifyContent: 'center' },
+  duelHot: { borderColor: C.red, backgroundColor: '#3a0f16' },
+  duelSideText: { fontFamily: F.bold, fontSize: 18, letterSpacing: 4, color: C.dim },
 });

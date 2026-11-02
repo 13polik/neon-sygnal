@@ -42,6 +42,7 @@ function buildWalls(grid) {
 function parse(map) {
   const spawn = { x: TILE * 1.5, y: TILE * 1.5 };
   const pickups = [];
+  const shards = [];
   const pois = [];
   const puddles = [];
   map.grid.forEach((row, r) =>
@@ -50,6 +51,7 @@ function parse(map) {
       const y = r * TILE + TILE / 2;
       if (ch === 'P') Object.assign(spawn, { x, y });
       else if (ch === '$') pickups.push({ key: `${c},${r}`, x, y });
+      else if (ch === 'M') shards.push({ key: `m${c},${r}`, x, y });
       else if (map.pois[ch]) pois.push({ ch, x, y, ...map.pois[ch] });
       if (ch !== '#' && (c * 7 + r * 3) % 11 === 0) puddles.push({ x, y, w: 26 + ((c * r) % 3) * 10 });
     })
@@ -57,6 +59,7 @@ function parse(map) {
   return {
     spawn,
     pickups,
+    shards,
     pois,
     puddles,
     walls: buildWalls(map.grid),
@@ -86,14 +89,14 @@ function sees(grid, ax, ay, bx, by) {
   return true;
 }
 
-export default function MapScreen({ mapId, mstate, game, onPoi, onPickup, onSpotted }) {
+export default function MapScreen({ mapId, mstate, game, paused, objective = { text: '' }, onPoi, onPickup, onShard, onSpotted }) {
   const map = MAPS[mapId];
   const world = useMemo(() => parse(map), [map]);
   const pos = useRef({ x: mstate.x, y: mstate.y });
   const joy = useRef(null);
   const taken = useRef(new Set(mstate.taken));
   const drones = useRef(
-    map.drones.map((d) => {
+    map.drones.filter((d) => !(d.unless && game.flags.includes(d.unless))).map((d) => {
       const ax = d.a[0] * TILE + TILE / 2;
       const ay = d.a[1] * TILE + TILE / 2;
       const bx = d.b[0] * TILE + TILE / 2;
@@ -107,7 +110,7 @@ export default function MapScreen({ mapId, mstate, game, onPoi, onPickup, onSpot
   const [near, setNear] = useState(null);
   const [toast, setToast] = useState(null);
   const cb = useRef({});
-  cb.current = { onPickup, onSpotted, jammer: game.flags.includes('jammer') };
+  cb.current = { onPickup, onShard, onSpotted, paused, jammer: game.flags.includes('jammer') };
 
   const toastTimer = useRef(null);
   const flash = (text, color) => {
@@ -121,9 +124,13 @@ export default function MapScreen({ mapId, mstate, game, onPoi, onPickup, onSpot
     let last = null;
     let nearCh = null;
     const step = (t) => {
-      const dt = last == null ? 0 : Math.min(0.05, (t - last) / 1000);
+      const dt = last == null || cb.current.paused ? 0 : Math.min(0.05, (t - last) / 1000);
       last = t;
       const p = pos.current;
+      if (cb.current.paused) {
+        raf = requestAnimationFrame(step);
+        return;
+      }
 
       const j = joy.current;
       if (j && (j.dx || j.dy)) {
@@ -140,6 +147,15 @@ export default function MapScreen({ mapId, mstate, game, onPoi, onPickup, onSpot
           taken.current.add(pk.key);
           buzz();
           cb.current.onPickup(pk.key, map.cash, { x: p.x, y: p.y });
+        }
+      }
+
+      for (const sh of world.shards) {
+        if (!taken.current.has(sh.key) && Math.hypot(sh.x - p.x, sh.y - p.y) < 24) {
+          taken.current.add(sh.key);
+          buzz('ok');
+          cb.current.onShard(sh.key, { x: p.x, y: p.y });
+          return;
         }
       }
 
@@ -203,12 +219,14 @@ export default function MapScreen({ mapId, mstate, game, onPoi, onPickup, onSpot
   const camY = world.h <= view.h ? (world.h - view.h) / 2 : Math.max(0, Math.min(world.h - view.h, p.y - view.h / 2));
   const nearPoi = world.pois.find((o) => o.ch === near);
   const nearDone = nearPoi && nearPoi.once && mstate.done.includes(nearPoi.ch);
+  const target = objective.target && world.pois.find((o) => o.ch === objective.target);
+  const arrow = target && Math.hypot(target.x - p.x, target.y - p.y) > 70 ? Math.atan2(target.y - p.y, target.x - p.x) : null;
+  const pulse = 0.55 + 0.45 * Math.sin(Date.now() / 220);
 
   return (
     <View style={s.wrap}>
       <View style={s.head}>
-        <Text style={s.title}>{map.title.toUpperCase()}</Text>
-        <Text style={s.objective}>{map.objective}</Text>
+        <Text style={s.objective}>{objective.text}</Text>
       </View>
 
       <View style={s.viewport} onLayout={(e) => setView({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
@@ -229,6 +247,13 @@ export default function MapScreen({ mapId, mstate, game, onPoi, onPickup, onSpot
           ))}
           {world.pickups.map((pk) =>
             taken.current.has(pk.key) ? null : <View key={pk.key} style={[s.chip, { left: pk.x - 6, top: pk.y - 6 }]} />
+          )}
+          {world.shards.map((sh) =>
+            taken.current.has(sh.key) ? null : (
+              <View key={sh.key} pointerEvents="none" style={[s.shardGlow, { left: sh.x - 16, top: sh.y - 16, opacity: pulse }]}>
+                <View style={s.shard} />
+              </View>
+            )
           )}
           {world.pois.map((o) => {
             const done = o.once && mstate.done.includes(o.ch);
@@ -266,6 +291,12 @@ export default function MapScreen({ mapId, mstate, game, onPoi, onPickup, onSpot
             </View>
           ))}
           <View style={[s.player, { left: p.x - PR, top: p.y - PR }]} />
+          {arrow != null ? (
+            <View
+              pointerEvents="none"
+              style={[s.arrow, { left: p.x + Math.cos(arrow) * 30 - 7, top: p.y + Math.sin(arrow) * 30 - 6, transform: [{ rotate: `${(arrow * 180) / Math.PI + 90}deg` }] }]}
+            />
+          ) : null}
         </View>
 
         <View
@@ -320,13 +351,25 @@ function Joystick({ j }) {
 const s = StyleSheet.create({
   wrap: { flex: 1 },
   head: { paddingVertical: 8, gap: 2 },
-  title: { fontFamily: F.bold, fontSize: 13, letterSpacing: 3, color: C.cyan },
   objective: { fontFamily: F.regular, fontSize: 13, color: C.text },
   viewport: { flex: 1, overflow: 'hidden', backgroundColor: '#05060b', borderWidth: 1, borderColor: C.line, marginBottom: 8 },
   world: { position: 'absolute', left: 0, top: 0, backgroundColor: '#0b0c16' },
   puddle: { position: 'absolute', height: 12, borderRadius: 6, backgroundColor: 'rgba(46,242,255,0.07)' },
   wall: { position: 'absolute', backgroundColor: '#121427', borderWidth: 1 },
   sign: { position: 'absolute', fontFamily: F.bold, fontSize: 10, letterSpacing: 1, textShadowRadius: 6, textShadowOffset: { width: 0, height: 0 } },
+  shardGlow: { position: 'absolute', width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,46,136,0.25)', alignItems: 'center', justifyContent: 'center' },
+  shard: { width: 12, height: 18, backgroundColor: C.pink, transform: [{ rotate: '20deg' }] },
+  arrow: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderBottomWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: C.cyan,
+  },
   chip: { position: 'absolute', width: 12, height: 12, borderWidth: 2, borderColor: C.yellow, transform: [{ rotate: '45deg' }] },
   poiWrap: { position: 'absolute', width: 140, alignItems: 'center' },
   poiLabel: { fontFamily: F.bold, fontSize: 11, color: C.pink, letterSpacing: 1, marginBottom: 2 },

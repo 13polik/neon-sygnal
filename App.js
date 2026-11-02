@@ -4,14 +4,16 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts, ChakraPetch_400Regular, ChakraPetch_500Medium, ChakraPetch_700Bold } from '@expo-google-fonts/chakra-petch';
 
-import { STORY, ENDINGS } from './src/story';
+import { ENDINGS, IMPLANTS, STORY, memoryCount, objective } from './src/story';
 import { applyEffect, clearSave, goTo, loadEndings, loadGame, lockReason, maxHp, meets, newGame, saveGame, unlockEnding } from './src/engine';
-import { ChaseGame, HackGame, TimingGame } from './src/MiniGames';
+import { ChaseGame, DuelGame, HackGame, TimingGame } from './src/MiniGames';
 import MapScreen from './src/MapScreen';
 import { MAPS } from './src/maps';
 import { C, F, buzz } from './src/theme';
 
 const DELTA_LABEL = { credits: 'kr', heat: 'Ślad', hp: 'Zdrowie', trust: 'Zaufanie Miry' };
+const GAME_LABEL = { hack: 'WŁAM', timing: 'REFLEKS', chase: 'POŚCIG', duel: 'POJEDYNEK' };
+const MINI = { hack: HackGame, timing: TimingGame, chase: ChaseGame, duel: DuelGame };
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({ ChakraPetch_400Regular, ChakraPetch_500Medium, ChakraPetch_700Bold });
@@ -21,6 +23,8 @@ export default function App() {
   const [endings, setEndings] = useState([]);
   const [deltas, setDeltas] = useState([]);
   const [pending, setPending] = useState(null);
+  const [card, setCard] = useState(null);
+  const [journal, setJournal] = useState(false);
 
   useEffect(() => {
     loadGame().then(setSaved);
@@ -29,13 +33,19 @@ export default function App() {
 
   if (!fontsLoaded && !fontError) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
 
-  const enter = async (state, d) => {
+  const enter = async (next, d) => {
+    let state = next;
+    const node = STORY[state.node];
+    // Karta tytułowa przy wejściu do nowego rozdziału
+    if (node.chapter?.startsWith('Rozdział') && node.chapter !== state.card) {
+      state = { ...state, card: node.chapter };
+      setCard(node.chapter);
+    }
     setDeltas(d);
     setGame(state);
-    const node = STORY[state.node];
     setScreen(node.ending ? 'ending' : node.map ? 'map' : 'story');
     if (node.ending) {
-      buzz(node.ending.key === 'signal' ? 'ok' : 'tap');
+      buzz(['signal', 'name'].includes(node.ending.key) ? 'ok' : 'tap');
       setSaved(null);
       setEndings(await unlockEnding(node.ending.key));
       await clearSave();
@@ -80,6 +90,11 @@ export default function App() {
     });
   };
 
+  const shard = (key, p) => {
+    const next = { ...game, map: { ...game.map, ...p, taken: [...game.map.taken, key] } };
+    enter(goTo(next, `memory_${memoryCount(game) + 1}`), []);
+  };
+
   const spotted = (p) => {
     const { state, deltas: d } = applyEffect({ ...game, map: { ...game.map, ...p } }, { heat: 15 });
     if (state.stats.heat >= 100) enter(goTo(state, 'end_caught'), d);
@@ -95,9 +110,10 @@ export default function App() {
   } else if (screen === 'endings') {
     body = <EndingsScreen found={endings} onBack={() => setScreen('title')} />;
   } else if (screen === 'game') {
-    const Mini = { hack: HackGame, timing: TimingGame, chase: ChaseGame }[pending.type];
+    const Mini = MINI[pending.type];
     body = (
       <View style={s.page}>
+        <TopRow label={GAME_LABEL[pending.type]} />
         <StatsBar game={game} />
         <Mini level={pending.level} mods={game.flags} onDone={finishGame} />
       </View>
@@ -105,22 +121,28 @@ export default function App() {
   } else if (screen === 'map') {
     body = (
       <View style={s.page}>
+        <TopRow label={MAPS[game.map.id].title} onJournal={() => setJournal(true)} onMenu={() => setScreen('title')} />
         <StatsBar game={game} />
         <MapScreen
           key={`${game.map.id}-${game.node}`}
           mapId={game.map.id}
           mstate={game.map}
           game={game}
+          paused={journal}
+          objective={objective(game)}
           onPoi={enterPoi}
           onPickup={pickup}
+          onShard={shard}
           onSpotted={spotted}
         />
       </View>
     );
   } else if (screen === 'ending') {
-    body = <EndingScreen node={STORY[game.node]} found={endings.length} onAgain={start} onMenu={() => setScreen('title')} />;
+    body = <EndingScreen node={STORY[game.node]} game={game} found={endings.length} onAgain={start} onMenu={() => setScreen('title')} />;
   } else {
-    body = <StoryScreen game={game} deltas={deltas} onChoose={choose} onMenu={() => setScreen('title')} />;
+    body = (
+      <StoryScreen game={game} deltas={deltas} hold={!!card} onChoose={choose} onJournal={() => setJournal(true)} onMenu={() => setScreen('title')} />
+    );
   }
 
   return (
@@ -128,6 +150,8 @@ export default function App() {
       <SafeAreaView style={s.root}>
         <StatusBar style="light" />
         {body}
+        {journal && game ? <Journal game={game} onClose={() => setJournal(false)} /> : null}
+        {card && ['story', 'map'].includes(screen) ? <ChapterCard chapter={card} onDone={() => setCard(null)} /> : null}
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -151,6 +175,100 @@ function Flicker({ children, style }) {
   return <Animated.Text style={[style, { opacity: o }]}>{children}</Animated.Text>;
 }
 
+function TopRow({ label, onJournal, onMenu }) {
+  return (
+    <View style={s.topRow}>
+      <Text style={[s.chapter, { flexShrink: 1 }]} numberOfLines={1}>
+        {label.toUpperCase()}
+      </Text>
+      <View style={{ flexDirection: 'row', gap: 18 }}>
+        {onJournal ? (
+          <Pressable onPress={onJournal} hitSlop={12}>
+            <Text style={[s.menu, { color: C.cyan }]}>DZIENNIK</Text>
+          </Pressable>
+        ) : null}
+        {onMenu ? (
+          <Pressable onPress={onMenu} hitSlop={12}>
+            <Text style={s.menu}>MENU</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function ChapterCard({ chapter, onDone }) {
+  const [num, name] = chapter.split(' · ');
+  const o = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    buzz();
+    Animated.timing(o, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+    const t = setTimeout(onDone, 2400);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <Pressable style={s.card} onPress={onDone}>
+      <Animated.View style={{ opacity: o, gap: 6 }}>
+        <Text style={s.cardNum}>{num.toUpperCase()}</Text>
+        <Flicker style={s.cardName}>{name.toUpperCase()}</Flicker>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+function Journal({ game, onClose }) {
+  const f = (x) => game.flags.includes(x);
+  const mem = memoryCount(game);
+  const sections = [
+    ['Cel', [objective(game).text]],
+    f('mira')
+      ? [
+          'Mira',
+          [
+            `Zaufanie: ${game.stats.trust > 0 ? '+' : ''}${game.stats.trust}`,
+            `Fragmenty pamięci: ${mem}/3`,
+            f('truth') && 'Halcyon kradnie wspomnienia przez wszczep Spokój.',
+            f('mem1') && 'Pamięta babcię, która śpiewała w kuchni na Szóstej Śluzie.',
+            f('mem2') && 'Ma siostrę Olę, która uczyła ją alfabetu Morse’a na wieży.',
+            f('mem3') && 'Naprawdę nazywa się Hania Wójcik. Umowę podsunęła jej Wren.',
+            f('sisters') && 'Oko to Ola, jej siostra.',
+          ],
+        ]
+      : null,
+    ['Przedmioty', [f('lamp') && !f('key') && 'Lampa mocy', f('key') && 'Klucz Oka do serwera Iglicy', f('archive') && 'Lista 4312 nazwisk z archiwum', f('wren_card') && 'Karta dostępu Wren']],
+    ['Wszczepy', Object.entries(IMPLANTS).map(([k, v]) => f(k) && v)],
+    [
+      'Sojusznicy i wiedza',
+      [f('rats_deal') && 'Szczury odetną prąd na piętrze Iglicy.', f('sokol_known') && 'Bruno ostrzegł cię przed agentem Sokołem.', f('oko_quest') && !f('lamp') && 'Oko czeka na lampę mocy.'],
+    ],
+  ]
+    .filter(Boolean)
+    .map(([title, lines]) => [title, lines.filter(Boolean)])
+    .filter(([, lines]) => lines.length);
+  return (
+    <View style={s.overlay}>
+      <View style={s.topRow}>
+        <Text style={[s.chapter, { color: C.cyan }]}>DZIENNIK</Text>
+        <Pressable onPress={onClose} hitSlop={12}>
+          <Text style={s.menu}>ZAMKNIJ</Text>
+        </Pressable>
+      </View>
+      <ScrollView contentContainerStyle={{ gap: 22, paddingVertical: 16 }}>
+        {sections.map(([title, lines]) => (
+          <View key={title} style={{ gap: 6 }}>
+            <Text style={s.kicker}>{title.toUpperCase()}</Text>
+            {lines.map((l) => (
+              <Text key={l} style={s.journalLine}>
+                {l}
+              </Text>
+            ))}
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 function Button({ label, onPress, color = C.cyan, disabled, note }) {
   return (
     <Pressable
@@ -171,7 +289,7 @@ function TitleScreen({ saved, found, onNew, onContinue, onEndings }) {
         <Text style={s.kicker}>NOWA WISŁA · 2091</Text>
         <Flicker style={[s.logo, { color: C.pink }]}>NEON</Flicker>
         <Text style={[s.logo, { color: C.cyan }]}>SYGNAŁ</Text>
-        <Text style={s.tagline}>Jeden chip. Jeden głos w twojej głowie.{'\n'}Osiem możliwych zakończeń.</Text>
+        <Text style={s.tagline}>Jeden chip. Jeden głos w twojej głowie.{'\n'}Dziewięć możliwych zakończeń.</Text>
       </View>
       <View style={{ gap: 12 }}>
         {saved ? <Button label="Kontynuuj" color={C.pink} onPress={onContinue} /> : null}
@@ -230,7 +348,7 @@ function Stat({ label, value, color }) {
   );
 }
 
-function StoryScreen({ game, deltas, onChoose, onMenu }) {
+function StoryScreen({ game, deltas, hold, onChoose, onJournal, onMenu }) {
   const node = STORY[game.node];
   const full = node.text;
   const [shown, setShown] = useState(0);
@@ -239,6 +357,7 @@ function StoryScreen({ game, deltas, onChoose, onMenu }) {
   useEffect(() => {
     setShown(0);
     scroll.current?.scrollTo({ y: 0, animated: false });
+    if (hold) return;
     const id = setInterval(() => {
       setShown((n) => {
         if (n >= full.length) {
@@ -249,18 +368,13 @@ function StoryScreen({ game, deltas, onChoose, onMenu }) {
       });
     }, 16);
     return () => clearInterval(id);
-  }, [game.node, full]);
+  }, [game.node, full, hold]);
 
   const done = shown >= full.length;
 
   return (
     <View style={s.page}>
-      <View style={s.topRow}>
-        <Text style={s.chapter}>{node.chapter.toUpperCase()}</Text>
-        <Pressable onPress={onMenu} hitSlop={12}>
-          <Text style={s.menu}>MENU</Text>
-        </Pressable>
-      </View>
+      <TopRow label={node.chapter} onJournal={onJournal} onMenu={onMenu} />
       <StatsBar game={game} />
       {deltas.length ? (
         <View style={s.deltas}>
@@ -286,7 +400,7 @@ function StoryScreen({ game, deltas, onChoose, onMenu }) {
           <View style={{ gap: 10, marginTop: 20 }}>
             {node.choices.map((ch, i) => {
               const ok = meets(ch.req, game);
-              const kind = ch.game ? { hack: 'WŁAM', timing: 'REFLEKS', chase: 'POŚCIG' }[ch.game.type] : null;
+              const kind = ch.game ? GAME_LABEL[ch.game.type] : null;
               return (
                 <Button
                   key={i}
@@ -305,14 +419,31 @@ function StoryScreen({ game, deltas, onChoose, onMenu }) {
   );
 }
 
-function EndingScreen({ node, found, onAgain, onMenu }) {
+function EndingScreen({ node, game, found, onAgain, onMenu }) {
   const e = node.ending;
+  const f = (x) => game.flags.includes(x);
+  const summary = [
+    ['Kredyty', `${game.stats.credits} kr`],
+    ['Ślad', `${game.stats.heat}%`],
+    ['Zaufanie Miry', f('mira') ? `${game.stats.trust > 0 ? '+' : ''}${game.stats.trust}` : '—'],
+    ['Fragmenty pamięci', `${memoryCount(game)}/3`],
+    ['Wszczepy', Object.keys(IMPLANTS).filter(f).length || '—'],
+  ];
   return (
     <View style={[s.page, { paddingVertical: 24 }]}>
       <ScrollView style={{ flex: 1 }}>
         <Text style={s.kicker}>ZAKOŃCZENIE</Text>
-        <Flicker style={[s.endTitle, { color: e.key === 'signal' ? C.cyan : C.pink }]}>{e.title}</Flicker>
+        <Flicker style={[s.endTitle, { color: e.key === 'name' ? C.yellow : e.key === 'signal' ? C.cyan : C.pink }]}>{e.title}</Flicker>
         <Text style={s.story}>{e.text}</Text>
+        <View style={s.summary}>
+          <Text style={s.kicker}>TWOJA HISTORIA</Text>
+          {summary.map(([k, v]) => (
+            <View key={k} style={s.sumRow}>
+              <Text style={s.sumKey}>{k}</Text>
+              <Text style={s.sumVal}>{v}</Text>
+            </View>
+          ))}
+        </View>
         <Text style={[s.kicker, { marginTop: 24 }]}>
           ODKRYTE: {found}/{ENDINGS.length}
         </Text>
@@ -349,4 +480,13 @@ const s = StyleSheet.create({
   endRow: { borderWidth: 1, paddingVertical: 12, paddingHorizontal: 14 },
   endName: { fontFamily: F.bold, fontSize: 17, letterSpacing: 1 },
   endTitle: { fontFamily: F.bold, fontSize: 40, lineHeight: 46, marginTop: 6 },
+  summary: { marginTop: 24, gap: 8, borderTopWidth: 1, borderColor: C.line, paddingTop: 16 },
+  sumRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  sumKey: { fontFamily: F.regular, fontSize: 15, color: C.dim },
+  sumVal: { fontFamily: F.bold, fontSize: 15, color: C.text, fontVariant: ['tabular-nums'] },
+  card: { ...StyleSheet.absoluteFillObject, backgroundColor: C.bg, justifyContent: 'center', paddingHorizontal: 28 },
+  cardNum: { fontFamily: F.medium, fontSize: 15, letterSpacing: 6, color: C.dim },
+  cardName: { fontFamily: F.bold, fontSize: 52, lineHeight: 58, letterSpacing: 3, color: C.pink },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: C.bg, paddingHorizontal: 18, paddingTop: 8 },
+  journalLine: { fontFamily: F.regular, fontSize: 16, lineHeight: 24, color: C.text },
 });

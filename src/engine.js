@@ -36,14 +36,14 @@ export function applyEffect(state, effect) {
   const stats = { ...state.stats };
   const flags = [...state.flags];
   const deltas = [];
-  if (effect.flag && !flags.includes(effect.flag)) flags.push(effect.flag);
+  for (const fl of [].concat(effect.flag || [])) if (!flags.includes(fl)) flags.push(fl);
   for (const k of ['credits', 'heat', 'hp', 'trust']) {
     if (effect[k] == null) continue;
     const before = stats[k];
     if (k === 'heat') stats.heat = clamp(before + effect.heat, 0, 100);
     else if (k === 'hp') stats.hp = clamp(before + effect.hp, 0, maxHp({ flags }));
     else if (k === 'credits') stats.credits = Math.max(0, before + effect.credits);
-    else stats.trust = clamp(before + effect.trust, -2, 4);
+    else stats.trust = clamp(before + effect.trust, -2, 5);
     if (stats[k] !== before) deltas.push({ k, v: stats[k] - before });
   }
   return { state: { ...state, stats, flags }, deltas };
